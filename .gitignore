@@ -1,0 +1,28 @@
+# ── Frontend (Next.js) ──
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# ── Env files ──
+.env
+.env.local
+.env*.local
+frontend/.env
+frontend/.env.local
+
+# ── Backend uploads (jangan commit file karyawan) ──
+backend/uploads/ktp/*
+backend/uploads/foto_diri/*
+!backend/uploads/ktp/.gitignore
+!backend/uploads/foto_diri/.gitignore
+
+# ── OS / editor ──
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

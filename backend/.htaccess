@@ -1,0 +1,22 @@
+Options -Indexes
+
+# ── CORS ──────────────────────────────────────────────────
+# DEVELOPMENT: gunakan "*" agar mudah dites dari localhost.
+# PRODUCTION: ganti dengan domain frontend Vercel yang fix, mis:
+#   Header always set Access-Control-Allow-Origin "https://boarding.rotibakarngeunah.my.id"
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+Header always set Access-Control-Allow-Credentials "true"
+
+# ── Preflight: balas OPTIONS dengan 200 tanpa eksekusi PHP ──
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# ── Clean URL: /api/onboarding -> /api/onboarding/index.php ──
+# Jika path tidak menunjuk file/folder nyata, biarkan PHP front-controller
+# (di sini tiap endpoint adalah file fisik, jadi cukup mapping folder -> index.php)
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.php -f
+RewriteRule ^(.*)$ $1/index.php [L]
