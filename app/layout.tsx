@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 export const metadata: Metadata = {
   title: 'RBN Boarding System',
   description: 'Sistem Manajemen Karyawan — Roti Bakar Ngeunah',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://boarding-karyawan.vercel.app'),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

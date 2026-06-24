@@ -13,9 +13,14 @@ Sistem manajemen karyawan **Roti Bakar Ngeunah (RBN)** — mengelola seluruh sik
 
 ```
 onboarding-karyawan/
-├── frontend/     # Next.js 14 → Vercel (Root Directory: frontend)
-└── backend/      # PHP → cPanel public_html/boarding-api/
+├── app/ components/ lib/ types/   # Next.js 14 (di ROOT repo) → Vercel
+├── package.json next.config.mjs …
+└── backend/                        # PHP → cPanel public_html/boarding-api/
 ```
+
+> **Catatan:** App Next.js berada di **root repo** (bukan subfolder), supaya Vercel
+> langsung mendeteksi & build tanpa perlu setel *Root Directory*. Backend PHP ada
+> di subfolder `backend/` dan dideploy terpisah ke cPanel (Vercel mengabaikannya).
 
 ---
 
@@ -56,14 +61,15 @@ onboarding-karyawan/
 
 ## Setup Frontend (Vercel)
 
-1. Connect repo GitHub, set **Root Directory** = `frontend`.
-2. Environment variables di Vercel:
+1. Connect repo GitHub — **Root Directory dibiarkan default (root)**, Vercel otomatis mendeteksi Next.js.
+2. Environment variables di Vercel (Settings → Environment Variables):
    ```
    NEXT_PUBLIC_API_URL=https://api.boarding.rotibakarngeunah.my.id
-   NEXT_PUBLIC_APP_URL=https://boarding.rotibakarngeunah.my.id
+   NEXT_PUBLIC_APP_URL=https://boarding-karyawan.vercel.app
    JWT_SECRET=sama_dengan_backend_jwt_secret
    ```
-3. Deploy.
+   Tanpa `NEXT_PUBLIC_API_URL`, situs tetap tampil tapi panggilan API gagal (set setelah backend live).
+3. Deploy (otomatis tiap push ke `main`).
 
 ### Development lokal
 
@@ -72,8 +78,7 @@ onboarding-karyawan/
 cd backend
 php -S localhost:8000          # API di http://localhost:8000
 
-# Frontend
-cd frontend
+# Frontend (di root repo)
 cp .env.local.example .env.local   # set NEXT_PUBLIC_API_URL=http://localhost:8000
 npm install
 npm run dev                    # http://localhost:3000
