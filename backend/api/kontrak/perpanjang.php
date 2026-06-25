@@ -61,7 +61,9 @@ try {
 
   $db->commit();
 
-  $row = $db->query("SELECT * FROM kontrak WHERE id = $baru_id")->fetch();
+  $stmt = $db->prepare('SELECT * FROM kontrak WHERE id = ? LIMIT 1');
+  $stmt->execute([$baru_id]);
+  $row = $stmt->fetch();
   json_success($row, "Kontrak diperpanjang. Nomor baru: $nomor.", 201);
 } catch (Throwable $e) {
   if (isset($db) && $db->inTransaction()) $db->rollBack();

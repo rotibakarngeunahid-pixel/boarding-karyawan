@@ -116,10 +116,10 @@ try {
 
   if ($method === 'PUT') {
     $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
-    if (!$id) json_error('Parameter id wajib.', 422);
     $body = get_json_body();
 
     // Dukungan reorder massal: { reorder: [{id, urutan}, ...] }
+    // Dicek sebelum validasi id agar id=0 (placeholder frontend) tidak diblokir
     if (isset($body['reorder']) && is_array($body['reorder'])) {
       $stmt = $db->prepare('UPDATE tes_soal SET urutan = ? WHERE id = ?');
       foreach ($body['reorder'] as $item) {
@@ -127,6 +127,8 @@ try {
       }
       json_success(null, 'Urutan soal diperbarui.');
     }
+
+    if (!$id) json_error('Parameter id wajib.', 422);
 
     $missing = validate_required($body, ['pertanyaan', 'pilihan_a', 'pilihan_b', 'pilihan_c', 'pilihan_d', 'jawaban_benar']);
     if ($missing) {

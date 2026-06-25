@@ -54,7 +54,9 @@ try {
   ]);
 
   $id = (int) $db->lastInsertId();
-  $row = $db->query("SELECT * FROM kontrak WHERE id = $id")->fetch();
+  $stmt = $db->prepare('SELECT * FROM kontrak WHERE id = ? LIMIT 1');
+  $stmt->execute([$id]);
+  $row = $stmt->fetch();
 
   json_success($row, "Kontrak $nomor berhasil dibuat.", 201);
 } catch (Throwable $e) {
