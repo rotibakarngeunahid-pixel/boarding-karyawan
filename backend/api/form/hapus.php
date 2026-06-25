@@ -16,12 +16,12 @@ try {
   $id = isset($body['id']) ? (int) $body['id'] : 0;
   if (!$id) json_error('Parameter id wajib.', 422);
 
-  $stmt = $db->prepare('SELECT is_builtin FROM form_fields WHERE id = ? LIMIT 1');
+  $stmt = $db->prepare('SELECT is_locked FROM form_fields WHERE id = ? LIMIT 1');
   $stmt->execute([$id]);
   $row = $stmt->fetch();
   if (!$row) json_error('Field tidak ditemukan.', 404);
-  if ((int) $row['is_builtin'] === 1) {
-    json_error('Field bawaan tidak bisa dihapus. Nonaktifkan saja bila tidak dipakai.', 422);
+  if ((int) $row['is_locked'] === 1) {
+    json_error('Field inti tidak bisa dihapus (data wajib sistem). Lainnya boleh.', 422);
   }
 
   $del = $db->prepare('DELETE FROM form_fields WHERE id = ?');

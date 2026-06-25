@@ -137,8 +137,9 @@ export default function FormBuilderPage() {
       ) : (
         <>
           <p className="mb-3 text-xs text-gray-400">
-            Seret ikon untuk mengubah urutan. Field bawaan tidak bisa dihapus (hanya dinonaktifkan).
-            Atur logika kondisional lewat tombol edit.
+            Seret ikon untuk mengubah urutan. Hanya field inti (berlabel{' '}
+            <span className="font-medium">Inti</span>) yang tidak bisa dihapus. Atur logika
+            kondisional & wajib/opsional lewat tombol edit.
           </p>
           {fields.length === 0 ? (
             <Card className="py-10 text-center text-sm text-gray-400">Belum ada field.</Card>
@@ -174,7 +175,9 @@ export default function FormBuilderPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="Hapus Pertanyaan?"
-        message={`Pertanyaan "${deleteTarget?.label ?? ''}" akan dihapus permanen dari form. Jawaban karyawan lama tetap tersimpan.`}
+        message={`Pertanyaan "${deleteTarget?.label ?? ''}" akan dihapus permanen dari form.${
+          deleteTarget?.is_builtin ? ' Ini field bawaan — tidak bisa dikembalikan otomatis (alternatif: nonaktifkan saja lewat edit).' : ''
+        } Jawaban karyawan lama tetap tersimpan.`}
         confirmText="Ya, Hapus"
         loading={deleting}
       />
@@ -245,7 +248,7 @@ function SortableFieldRow({
       >
         <Pencil className="h-4 w-4" />
       </button>
-      {field.is_builtin === 0 && (
+      {field.is_locked === 0 && (
         <button
           onClick={onDelete}
           className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
