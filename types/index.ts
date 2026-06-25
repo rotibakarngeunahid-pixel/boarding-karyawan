@@ -182,6 +182,14 @@ export interface KontrakDetailResponse {
   penerus: Kontrak[];
 }
 
+export interface KontrakPreviewResponse {
+  text: string;
+  using_template: boolean;
+  template_name: string | null;
+  warning: string | null;
+  placeholders: Record<string, string>;
+}
+
 export interface KaryawanDetailResponse {
   karyawan: Karyawan;
   tes: HasilTes[];

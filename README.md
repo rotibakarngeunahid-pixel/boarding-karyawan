@@ -91,19 +91,20 @@ npm run dev                    # http://localhost:3000
 | Method | Path | Akses |
 |---|---|---|
 | POST | `/api/auth/login.php` | publik |
-| GET/POST | `/api/onboarding/index.php` | admin |
+| GET/POST/DELETE | `/api/onboarding/index.php` | admin |
 | GET | `/api/onboarding/verify.php?token=` | publik |
 | POST | `/api/onboarding/submit.php` | publik (multipart) |
 | GET/POST/PUT/DELETE | `/api/tes/soal.php` | publik (GET soal) / admin (mutasi) |
 | GET/PUT | `/api/tes/pengaturan.php` | admin |
 | POST | `/api/tes/kerjakan.php` | publik |
 | GET | `/api/tes/hasil.php` | admin |
-| GET/PUT | `/api/karyawan/index.php` | admin |
+| GET/PUT/DELETE | `/api/karyawan/index.php` | admin |
 | GET | `/api/karyawan/detail.php?id=` | admin |
 | POST | `/api/karyawan/approve.php` | admin |
-| GET | `/api/kontrak/index.php` | admin |
+| GET/DELETE | `/api/kontrak/index.php` | admin |
 | POST | `/api/kontrak/buat.php` | admin |
 | GET | `/api/kontrak/detail.php?id=` | admin |
+| GET | `/api/kontrak/preview.php?kontrak_id=` | admin |
 | POST | `/api/kontrak/perpanjang.php` | admin |
 | GET | `/api/kontrak/expiring.php?hari=` | admin |
 

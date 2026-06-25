@@ -76,3 +76,31 @@ function handle_upload(array $file, string $subdir, int $maxBytes = UPLOAD_MAX_S
     'url'      => rtrim(UPLOAD_URL_BASE, '/') . '/' . $relative,
   ];
 }
+
+/**
+ * Hapus file upload berdasarkan path relatif yang tersimpan di database.
+ * Path divalidasi agar tetap berada di dalam folder uploads/.
+ */
+function delete_uploaded_file(?string $relativePath): bool {
+  if (!$relativePath) return false;
+
+  $base = realpath(rtrim(UPLOAD_BASE, '/\\'));
+  if ($base === false) return false;
+
+  $relative = ltrim(str_replace(['..', '\\'], ['', '/'], $relativePath), '/');
+  if ($relative === '' || basename($relative) === '.gitignore') return false;
+
+  $target = realpath($base . DIRECTORY_SEPARATOR . $relative);
+  if ($target === false || !is_file($target)) return false;
+
+  $basePrefix = rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+  if (strpos($target, $basePrefix) !== 0) return false;
+
+  return @unlink($target);
+}
+
+function delete_uploaded_files(array $paths): void {
+  foreach (array_unique(array_filter($paths)) as $path) {
+    delete_uploaded_file((string) $path);
+  }
+}

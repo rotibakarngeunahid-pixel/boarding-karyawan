@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Download } from 'lucide-react';
+import { Search, Download, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -10,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD, EmptyRow } from '@/components/ui/table';
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
-import { listKaryawan } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ui/modal';
+import { ApiError, deleteKaryawan, listKaryawan } from '@/lib/api';
 import { CABANG_LIST, type Karyawan } from '@/types';
 import { exportToCSV, formatTanggal } from '@/lib/utils';
 
@@ -33,6 +35,8 @@ export default function KaryawanPage() {
   const [cabang, setCabang] = useState('');
   const [status, setStatus] = useState('');
   const [statusTes, setStatusTes] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<Karyawan | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,6 +70,21 @@ export default function KaryawanPage() {
         Status: k.status,
       })),
     );
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteKaryawan(deleteTarget.id);
+      toast.success('Karyawan berhasil dihapus.');
+      setDeleteTarget(null);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus karyawan.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -125,11 +144,12 @@ export default function KaryawanPage() {
               <TH>Bergabung</TH>
               <TH>Status Tes</TH>
               <TH>Status</TH>
+              <TH className="text-right">Aksi</TH>
             </TR>
           </THead>
           <TBody>
             {items.length === 0 ? (
-              <EmptyRow colSpan={7}>Tidak ada karyawan.</EmptyRow>
+              <EmptyRow colSpan={8}>Tidak ada karyawan.</EmptyRow>
             ) : (
               items.map((k) => (
                 <TR
@@ -148,12 +168,33 @@ export default function KaryawanPage() {
                   <TD>
                     <Badge status={k.status}>{k.status}</Badge>
                   </TD>
+                  <TD className="text-right">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(k);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Hapus
+                    </button>
+                  </TD>
                 </TR>
               ))
             )}
           </TBody>
         </Table>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Hapus Karyawan?"
+        message={`Karyawan${deleteTarget ? ` ${deleteTarget.nama_lengkap}` : ''} akan dihapus permanen beserta hasil tes, kontrak, invitation onboarding, dan file upload terkait.`}
+        confirmText="Ya, Hapus"
+        loading={deleting}
+      />
     </AdminShell>
   );
 }

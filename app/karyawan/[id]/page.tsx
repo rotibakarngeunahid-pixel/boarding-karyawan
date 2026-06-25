@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,10 @@ import { Card } from '@/components/ui/card';
 import { Textarea, Label } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
-import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog, Modal } from '@/components/ui/modal';
 import {
   approveKaryawan,
+  deleteKaryawan,
   getKaryawanDetail,
   updateKaryawanStatus,
   ApiError,
@@ -26,6 +27,7 @@ type Tab = 'identitas' | 'tes' | 'kontrak' | 'approval';
 
 export default function KaryawanDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = Number(params.id);
 
   const [loading, setLoading] = useState(true);
@@ -35,8 +37,10 @@ export default function KaryawanDetailPage() {
   const [imgPreview, setImgPreview] = useState<string | null>(null);
 
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [catatan, setCatatan] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,6 +84,19 @@ export default function KaryawanDetailPage() {
     }
   }
 
+  async function handleDelete() {
+    setDeleteLoading(true);
+    try {
+      await deleteKaryawan(id);
+      toast.success('Karyawan berhasil dihapus.');
+      router.push('/karyawan');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus karyawan.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   const k = data?.karyawan;
   const needApproval = k?.invitation_status === 'submitted';
 
@@ -94,11 +111,16 @@ export default function KaryawanDetailPage() {
     <AdminShell
       title="Detail Karyawan"
       action={
-        <Link href="/karyawan">
-          <Button variant="outline">
-            <ArrowLeft className="h-4 w-4" /> Kembali
+        <div className="flex gap-2">
+          <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="h-4 w-4" /> Hapus
           </Button>
-        </Link>
+          <Link href="/karyawan">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4" /> Kembali
+            </Button>
+          </Link>
+        </div>
       }
     >
       {loading ? (
@@ -340,6 +362,16 @@ export default function KaryawanDetailPage() {
           </Button>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        title="Hapus Karyawan?"
+        message={`Karyawan${k ? ` ${k.nama_lengkap}` : ''} akan dihapus permanen beserta hasil tes, kontrak, invitation onboarding, dan file upload terkait.`}
+        confirmText="Ya, Hapus"
+        loading={deleteLoading}
+      />
 
       {/* Lightbox foto */}
       <Modal open={!!imgPreview} onClose={() => setImgPreview(null)} title="Pratinjau Foto" className="max-w-2xl">

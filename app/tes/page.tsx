@@ -124,7 +124,7 @@ function SoalTab() {
     setDeleting(true);
     try {
       await deleteSoal(deleteId);
-      toast.success('Soal dinonaktifkan.');
+      toast.success('Soal berhasil dihapus.');
       setDeleteId(null);
       await load();
     } catch (err) {
@@ -158,9 +158,9 @@ function SoalTab() {
         open={deleteId !== null}
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
-        title="Nonaktifkan Soal?"
-        message="Soal akan dinonaktifkan dan tidak muncul di tes. Riwayat hasil tetap aman."
-        confirmText="Ya, Nonaktifkan"
+        title="Hapus Soal?"
+        message="Soal akan dihapus permanen dari bank soal. Riwayat hasil tes lama tetap menyimpan snapshot jawaban."
+        confirmText="Ya, Hapus"
         loading={deleting}
       />
     </>

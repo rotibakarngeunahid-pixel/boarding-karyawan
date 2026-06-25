@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/onboarding.php';
+require_once __DIR__ . '/../../helpers/upload.php';
 
 // REVISI 4: bangun URL penuh gambar soal dari path relatif.
 function soal_image_url(?string $path): ?string {
@@ -148,10 +149,30 @@ try {
   if ($method === 'DELETE') {
     $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
     if (!$id) json_error('Parameter id wajib.', 422);
-    // Soft-delete: deaktivasi agar histori hasil tes tetap konsisten.
-    $stmt = $db->prepare('UPDATE tes_soal SET aktif = 0 WHERE id = ?');
+
+    $stmt = $db->prepare('SELECT question_image FROM tes_soal WHERE id = ? LIMIT 1');
     $stmt->execute([$id]);
-    json_success(null, 'Soal dinonaktifkan.');
+    $row = $stmt->fetch();
+    if (!$row) {
+      json_error('Soal tidak ditemukan.', 404);
+    }
+
+    $imagePath = $row['question_image'] ?? null;
+    $deleteImage = false;
+    if ($imagePath) {
+      $stmt = $db->prepare('SELECT COUNT(*) FROM tes_soal WHERE question_image = ? AND id <> ?');
+      $stmt->execute([$imagePath, $id]);
+      $deleteImage = ((int) $stmt->fetchColumn()) === 0;
+    }
+
+    $stmt = $db->prepare('DELETE FROM tes_soal WHERE id = ?');
+    $stmt->execute([$id]);
+
+    if ($deleteImage) {
+      delete_uploaded_file($imagePath);
+    }
+
+    json_success(null, 'Soal berhasil dihapus.');
   }
 
   json_error('Method not allowed.', 405);

@@ -1,10 +1,12 @@
 <?php
 // GET  /api/onboarding        -> list undangan (+ ringkasan karyawan jika sudah submit)
 // POST /api/onboarding        -> buat undangan baru
+// DELETE /api/onboarding?id=N -> hard delete undangan + submission terkait
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/onboarding.php';
+require_once __DIR__ . '/../../helpers/delete.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $auth = require_auth();
@@ -71,7 +73,24 @@ try {
     ], 'Undangan berhasil dibuat.', 201);
   }
 
+  if ($method === 'DELETE') {
+    $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+    if (!$id) json_error('Parameter id wajib.', 422);
+
+    $db->beginTransaction();
+    $result = hard_delete_invitation($db, $id);
+    if (!$result['deleted']) {
+      $db->rollBack();
+      json_error('Undangan onboarding tidak ditemukan.', 404);
+    }
+    $db->commit();
+
+    delete_uploaded_files($result['files']);
+    json_success(null, 'Undangan onboarding berhasil dihapus.');
+  }
+
   json_error('Method not allowed.', 405);
 } catch (Throwable $e) {
+  if (isset($db) && $db->inTransaction()) $db->rollBack();
   json_error('Terjadi kesalahan server.', 500, [$e->getMessage()]);
 }

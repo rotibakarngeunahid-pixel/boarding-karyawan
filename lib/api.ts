@@ -18,6 +18,7 @@ import type {
   KaryawanDetailResponse,
   Kontrak,
   KontrakDetailResponse,
+  KontrakPreviewResponse,
   KontrakTemplate,
   LoginResponse,
   SoalPublicResponse,
@@ -143,6 +144,10 @@ export function createInvitation(payload: {
   return request<Invitation>('/api/onboarding/index.php', { method: 'POST', body: payload });
 }
 
+export function deleteInvitation(id: number): Promise<null> {
+  return request<null>(`/api/onboarding/index.php?id=${id}`, { method: 'DELETE' });
+}
+
 export function verifyInvitation(token: string): Promise<InvitationVerify> {
   return request<InvitationVerify>(`/api/onboarding/verify.php?token=${encodeURIComponent(token)}`, {
     auth: false,
@@ -241,6 +246,10 @@ export function updateKaryawanStatus(id: number, status: string): Promise<null> 
   return request<null>(`/api/karyawan/index.php?id=${id}`, { method: 'PUT', body: { status } });
 }
 
+export function deleteKaryawan(id: number): Promise<null> {
+  return request<null>(`/api/karyawan/index.php?id=${id}`, { method: 'DELETE' });
+}
+
 export function approveKaryawan(payload: {
   karyawan_id: number;
   action: 'approved' | 'rejected';
@@ -277,6 +286,14 @@ export function createKontrak(payload: {
 
 export function getKontrakDetail(id: number): Promise<KontrakDetailResponse> {
   return request<KontrakDetailResponse>(`/api/kontrak/detail.php?id=${id}`);
+}
+
+export function getKontrakPreview(id: number): Promise<KontrakPreviewResponse> {
+  return request<KontrakPreviewResponse>(`/api/kontrak/preview.php?kontrak_id=${id}`);
+}
+
+export function deleteKontrak(id: number): Promise<null> {
+  return request<null>(`/api/kontrak/index.php?id=${id}`, { method: 'DELETE' });
 }
 
 // REVISI 3 — template kontrak (.doc/.docx)

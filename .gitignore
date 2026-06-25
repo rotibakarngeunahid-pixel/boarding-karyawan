@@ -15,8 +15,12 @@ next-env.d.ts
 # ── Backend uploads (jangan commit file karyawan) ──
 backend/uploads/ktp/*
 backend/uploads/foto_diri/*
+backend/uploads/soal/*
+backend/uploads/templates/*
 !backend/uploads/ktp/.gitignore
 !backend/uploads/foto_diri/.gitignore
+!backend/uploads/soal/.gitignore
+!backend/uploads/templates/.gitignore
 
 # ── OS / editor ──
 .DS_Store

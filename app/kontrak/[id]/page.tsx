@@ -2,22 +2,30 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ArrowLeft, RefreshCw, FileText, FileDown } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, RefreshCw, FileText, FileDown, Eye, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Input, Textarea, Label } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog, Modal } from '@/components/ui/modal';
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
-import { ApiError, downloadKontrakDoc, getKontrakDetail, perpanjangKontrak } from '@/lib/api';
-import type { Kontrak, KontrakDetailResponse } from '@/types';
+import {
+  ApiError,
+  deleteKontrak,
+  downloadKontrakDoc,
+  getKontrakDetail,
+  getKontrakPreview,
+  perpanjangKontrak,
+} from '@/lib/api';
+import type { Kontrak, KontrakDetailResponse, KontrakPreviewResponse } from '@/types';
 import { formatTanggal, formatRupiah, sisaHari, cn } from '@/lib/utils';
 
 export default function KontrakDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = Number(params.id);
 
   const [loading, setLoading] = useState(true);
@@ -25,12 +33,17 @@ export default function KontrakDetailPage() {
   const [data, setData] = useState<KontrakDetailResponse | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [preview, setPreview] = useState<KontrakPreviewResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [tglMulai, setTglMulai] = useState('');
   const [tglBerakhir, setTglBerakhir] = useState('');
   const [gaji, setGaji] = useState('');
   const [catatan, setCatatan] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false); // REVISI 3
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // REVISI 3 — unduh surat kontrak dari template
   async function handleDownloadDoc() {
@@ -43,6 +56,32 @@ export default function KontrakDetailPage() {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengunduh surat kontrak.');
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handlePreview() {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    try {
+      setPreview(await getKontrakPreview(id));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat preview kontrak.');
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleteLoading(true);
+    try {
+      await deleteKontrak(id);
+      toast.success('Kontrak berhasil dihapus.');
+      router.push('/kontrak');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menghapus kontrak.');
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -127,8 +166,14 @@ export default function KontrakDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge status={k.status}>{k.status}</Badge>
+                  <Button size="sm" variant="outline" onClick={handlePreview} loading={previewLoading}>
+                    <Eye className="h-4 w-4" /> Preview
+                  </Button>
                   <Button size="sm" variant="outline" onClick={handleDownloadDoc} loading={downloading}>
                     <FileDown className="h-4 w-4" /> Surat Kontrak
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)}>
+                    <Trash2 className="h-4 w-4" /> Hapus
                   </Button>
                   {k.status === 'aktif' && (
                     <Button size="sm" onClick={() => setModalOpen(true)}>
@@ -250,6 +295,36 @@ export default function KontrakDetailPage() {
           </div>
         </form>
       </Modal>
+
+      <Modal open={previewOpen} onClose={() => setPreviewOpen(false)} title="Preview Kontrak Kerja" className="max-w-3xl">
+        {previewLoading ? (
+          <LoadingState />
+        ) : preview ? (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
+              {preview.using_template
+                ? `Menggunakan template: ${preview.template_name ?? '-'}`
+                : 'Menggunakan format preview standar.'}
+              {preview.warning ? ` ${preview.warning}` : ''}
+            </div>
+            <div className="max-h-[60vh] whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-5 text-sm leading-7 text-gray-900">
+              {preview.text}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">Preview tidak tersedia.</p>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        title="Hapus Kontrak?"
+        message={`Kontrak${k ? ` ${k.nomor_kontrak}` : ''} akan dihapus permanen. Jika ada kontrak penerus, relasi perpanjangannya akan dilepas.`}
+        confirmText="Ya, Hapus"
+        loading={deleteLoading}
+      />
     </AdminShell>
   );
 }
