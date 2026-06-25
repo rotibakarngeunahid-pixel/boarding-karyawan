@@ -10,9 +10,23 @@ import { Select } from '@/components/ui/select';
 import { FileUploadPreview } from '@/components/shared/FileUploadPreview';
 import { Logo } from '@/components/shared/Logo';
 import { LoadingState } from '@/components/ui/spinner';
-import { ApiError, submitOnboarding, verifyInvitation } from '@/lib/api';
+import { ApiError, getFormFieldsPublic, submitOnboarding, verifyInvitation } from '@/lib/api';
 import { PROVINSI_LIST } from '@/lib/utils';
-import type { InvitationVerify, JenisKelamin, StatusPendidikan } from '@/types';
+import type { FieldCondition, FormField, InvitationVerify } from '@/types';
+
+// ── Evaluasi aturan kondisional (mirror logika backend) ──
+function ruleMatches(cond: FieldCondition | null, values: Record<string, string>): boolean {
+  if (!cond) return false;
+  const actual = values[cond.field] ?? '';
+  return cond.op === '!=' ? actual !== cond.value : actual === cond.value;
+}
+function isVisible(f: FormField, values: Record<string, string>): boolean {
+  return f.show_if ? ruleMatches(f.show_if, values) : true;
+}
+function isRequired(f: FormField, values: Record<string, string>): boolean {
+  if (f.wajib === 1) return true;
+  return f.wajib_if ? ruleMatches(f.wajib_if, values) : false;
+}
 
 export default function OnboardingFormPage() {
   const params = useParams();
@@ -20,31 +34,30 @@ export default function OnboardingFormPage() {
   const token = String(params.token);
 
   const [checking, setChecking] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [verify, setVerify] = useState<InvitationVerify | null>(null);
+  const [fields, setFields] = useState<FormField[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
-  const [namaLengkap, setNamaLengkap] = useState('');
-  const [namaPanggilan, setNamaPanggilan] = useState('');
-  const [jenisKelamin, setJenisKelamin] = useState<JenisKelamin | ''>('');
-  const [tanggalLahir, setTanggalLahir] = useState('');
-  const [provinsi, setProvinsi] = useState('');
-  const [alamat, setAlamat] = useState('');
-  const [noWa, setNoWa] = useState('');
-  const [noKtp, setNoKtp] = useState('');
-  const [fotoKtp, setFotoKtp] = useState<File | null>(null);
-  const [fotoDiri, setFotoDiri] = useState<File | null>(null);
-  const [statusPendidikan, setStatusPendidikan] = useState<StatusPendidikan | ''>('');
-  const [namaSekolah, setNamaSekolah] = useState('');
+  // Nilai non-file (juga dipakai untuk evaluasi kondisi) + file terpisah
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, File | null>>({});
+
+  const setVal = (key: string, v: string) => setValues((s) => ({ ...s, [key]: v }));
+  const setFile = (key: string, f: File | null) => setFiles((s) => ({ ...s, [key]: f }));
 
   const check = useCallback(async () => {
     setChecking(true);
+    setLoadError(false);
     try {
-      setVerify(await verifyInvitation(token));
+      const [v, fs] = await Promise.all([verifyInvitation(token), getFormFieldsPublic()]);
+      setVerify(v);
+      setFields(fs);
     } catch {
+      setLoadError(true);
       setVerify({
         valid: false,
-        reason: 'Terjadi kesalahan saat memverifikasi link.',
+        reason: 'Terjadi kesalahan saat memuat formulir.',
         invitation: { cabang: 'Pamogan', posisi: '', catatan: null, status: 'pending', expires_at: '' },
       });
     } finally {
@@ -58,33 +71,31 @@ export default function OnboardingFormPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!namaLengkap || !jenisKelamin || !tanggalLahir || !alamat || !noWa) {
-      toast.error('Lengkapi semua field yang wajib diisi.');
-      return;
+
+    // Validasi field wajib yang sedang tampil
+    const missing: string[] = [];
+    for (const f of fields) {
+      if (!isVisible(f, values) || !isRequired(f, values)) continue;
+      const filled =
+        f.tipe === 'file' ? !!files[f.field_key] : (values[f.field_key] ?? '').trim() !== '';
+      if (!filled) missing.push(f.label);
     }
-    if (!fotoKtp || !fotoDiri) {
-      toast.error('Foto KTP dan foto diri wajib diunggah.');
-      return;
-    }
-    if (statusPendidikan === 'Sudah selesai menempuh pendidikan' && !namaSekolah) {
-      toast.error('Nama sekolah/tempat kuliah wajib diisi.');
+    if (missing.length) {
+      toast.error(`Lengkapi field wajib: ${missing.join(', ')}.`);
       return;
     }
 
     const fd = new FormData();
     fd.append('token', token);
-    fd.append('nama_lengkap', namaLengkap);
-    fd.append('nama_panggilan', namaPanggilan);
-    fd.append('jenis_kelamin', jenisKelamin);
-    fd.append('tanggal_lahir', tanggalLahir);
-    fd.append('provinsi_lahir', provinsi);
-    fd.append('alamat_tinggal', alamat);
-    fd.append('no_whatsapp', noWa);
-    fd.append('no_ktp', noKtp);
-    fd.append('status_pendidikan', statusPendidikan);
-    fd.append('nama_sekolah', namaSekolah);
-    fd.append('foto_ktp', fotoKtp);
-    fd.append('foto_diri', fotoDiri);
+    for (const f of fields) {
+      if (!isVisible(f, values)) continue; // field tersembunyi tidak dikirim
+      if (f.tipe === 'file') {
+        const file = files[f.field_key];
+        if (file) fd.append(f.field_key, file);
+      } else {
+        fd.append(f.field_key, values[f.field_key] ?? '');
+      }
+    }
 
     setSubmitting(true);
     try {
@@ -100,7 +111,7 @@ export default function OnboardingFormPage() {
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <LoadingState text="Memverifikasi link…" />
+        <LoadingState text="Memuat formulir…" />
       </div>
     );
   }
@@ -110,17 +121,26 @@ export default function OnboardingFormPage() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
           <AlertCircle className="mx-auto h-12 w-12 text-red-500" />
-          <h1 className="mt-4 text-xl font-bold text-gray-900">Link Tidak Valid</h1>
+          <h1 className="mt-4 text-xl font-bold text-gray-900">
+            {loadError ? 'Gagal Memuat' : 'Link Tidak Valid'}
+          </h1>
           <p className="mt-2 text-sm text-gray-500">
             {verify?.reason || 'Link onboarding tidak ditemukan, sudah digunakan, atau kedaluwarsa.'}
           </p>
-          <p className="mt-4 text-sm text-gray-400">Silakan hubungi admin RBN untuk link baru.</p>
+          {loadError ? (
+            <Button className="mt-4" onClick={check}>
+              Coba Lagi
+            </Button>
+          ) : (
+            <p className="mt-4 text-sm text-gray-400">Silakan hubungi admin RBN untuk link baru.</p>
+          )}
         </div>
       </div>
     );
   }
 
   const inv = verify.invitation;
+  const visibleFields = fields.filter((f) => isVisible(f, values));
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -147,122 +167,97 @@ export default function OnboardingFormPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-gray-900">Data Identitas</h2>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label required>Nama Lengkap</Label>
-              <Input value={namaLengkap} onChange={(e) => setNamaLengkap(e.target.value)} />
-            </div>
-            <div>
-              <Label>Nama Panggilan</Label>
-              <Input value={namaPanggilan} onChange={(e) => setNamaPanggilan(e.target.value)} />
-            </div>
-          </div>
-
-          <div>
-            <Label required>Jenis Kelamin</Label>
-            <div className="flex gap-4">
-              {(['Laki-Laki', 'Perempuan'] as JenisKelamin[]).map((jk) => (
-                <label key={jk} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="jk"
-                    checked={jenisKelamin === jk}
-                    onChange={() => setJenisKelamin(jk)}
-                    className="h-4 w-4 accent-rbn-primary"
-                  />
-                  {jk}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label required>Tanggal Lahir</Label>
-              <Input type="date" value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} />
-            </div>
-            <div>
-              <Label>Provinsi Tempat Lahir</Label>
-              <Select value={provinsi} onChange={(e) => setProvinsi(e.target.value)}>
-                <option value="">— Pilih Provinsi —</option>
-                {PROVINSI_LIST.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label required>Alamat Tempat Tinggal</Label>
-            <Textarea rows={2} value={alamat} onChange={(e) => setAlamat(e.target.value)} />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label required>No. WhatsApp</Label>
-              <Input
-                value={noWa}
-                onChange={(e) => setNoWa(e.target.value)}
-                placeholder="08xxxxxxxxxx"
-                inputMode="tel"
+          {visibleFields.length === 0 ? (
+            <p className="py-6 text-center text-sm text-gray-400">Belum ada pertanyaan pada formulir.</p>
+          ) : (
+            visibleFields.map((f) => (
+              <FieldRenderer
+                key={f.id}
+                field={f}
+                required={isRequired(f, values)}
+                value={values[f.field_key] ?? ''}
+                onValue={(v) => setVal(f.field_key, v)}
+                onFile={(file) => setFile(f.field_key, file)}
               />
-            </div>
-            <div>
-              <Label>No. KTP</Label>
-              <Input
-                value={noKtp}
-                onChange={(e) => setNoKtp(e.target.value)}
-                placeholder="Ketik 0 jika belum punya"
-                inputMode="numeric"
-                maxLength={16}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FileUploadPreview label="Foto KTP" onChange={setFotoKtp} required />
-            <FileUploadPreview label="Foto Diri" onChange={setFotoDiri} required />
-          </div>
-
-          <hr className="border-gray-100" />
-          <h2 className="text-base font-semibold text-gray-900">Pendidikan</h2>
-
-          <div>
-            <Label required>Status Pendidikan</Label>
-            <div className="space-y-2">
-              {(
-                ['Sedang menempuh pendidikan', 'Sudah selesai menempuh pendidikan'] as StatusPendidikan[]
-              ).map((sp) => (
-                <label key={sp} className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="pendidikan"
-                    checked={statusPendidikan === sp}
-                    onChange={() => setStatusPendidikan(sp)}
-                    className="h-4 w-4 accent-rbn-primary"
-                  />
-                  {sp}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {statusPendidikan === 'Sudah selesai menempuh pendidikan' && (
-            <div>
-              <Label required>Nama Sekolah / Tempat Kuliah</Label>
-              <Input value={namaSekolah} onChange={(e) => setNamaSekolah(e.target.value)} />
-            </div>
+            ))
           )}
 
           <Button type="submit" loading={submitting} className="w-full" size="lg">
-            Kirim & Lanjut ke Tes
+            Kirim &amp; Lanjut ke Tes
           </Button>
         </form>
       </div>
+    </div>
+  );
+}
+
+function FieldRenderer({
+  field: f,
+  required,
+  value,
+  onValue,
+  onFile,
+}: {
+  field: FormField;
+  required: boolean;
+  value: string;
+  onValue: (v: string) => void;
+  onFile: (file: File | null) => void;
+}) {
+  // File: komponen sendiri sudah punya label
+  if (f.tipe === 'file') {
+    return (
+      <div>
+        <FileUploadPreview label={f.label} onChange={onFile} required={required} />
+        {f.bantuan && <p className="mt-1 text-xs text-gray-400">{f.bantuan}</p>}
+      </div>
+    );
+  }
+
+  const opsi =
+    f.field_key === 'provinsi_lahir' && f.opsi.length === 0 ? PROVINSI_LIST : f.opsi;
+
+  return (
+    <div>
+      <Label required={required}>{f.label}</Label>
+
+      {f.tipe === 'textarea' ? (
+        <Textarea rows={2} value={value} onChange={(e) => onValue(e.target.value)} placeholder={f.placeholder ?? ''} />
+      ) : f.tipe === 'select' ? (
+        <Select value={value} onChange={(e) => onValue(e.target.value)}>
+          <option value="">— Pilih —</option>
+          {opsi.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </Select>
+      ) : f.tipe === 'radio' ? (
+        <div className="space-y-2">
+          {f.opsi.map((o) => (
+            <label key={o} className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name={f.field_key}
+                checked={value === o}
+                onChange={() => onValue(o)}
+                className="h-4 w-4 accent-rbn-primary"
+              />
+              {o}
+            </label>
+          ))}
+        </div>
+      ) : (
+        <Input
+          type={f.tipe === 'number' ? 'number' : f.tipe === 'tel' ? 'tel' : f.tipe === 'date' ? 'date' : 'text'}
+          inputMode={f.tipe === 'tel' ? 'tel' : f.tipe === 'number' ? 'numeric' : undefined}
+          value={value}
+          onChange={(e) => onValue(e.target.value)}
+          placeholder={f.placeholder ?? ''}
+        />
+      )}
+
+      {f.bantuan && f.tipe !== 'radio' && <p className="mt-1 text-xs text-gray-400">{f.bantuan}</p>}
     </div>
   );
 }

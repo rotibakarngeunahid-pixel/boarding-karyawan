@@ -239,6 +239,34 @@ export default function KaryawanDetailPage() {
                   )}
                 </div>
               </div>
+
+              {k.data_tambahan && k.data_tambahan.length > 0 && (
+                <div className="mt-6 border-t border-gray-100 pt-4">
+                  <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Data Tambahan</p>
+                  <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                    {k.data_tambahan.map((d) => (
+                      <div key={d.key} className={d.tipe === 'file' ? 'sm:col-span-2' : ''}>
+                        <dt className="text-xs font-medium uppercase text-gray-400">{d.label}</dt>
+                        {d.tipe === 'file' ? (
+                          d.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={d.url}
+                              alt={d.label}
+                              className="mt-1 h-32 w-48 cursor-pointer rounded-lg border border-gray-200 object-cover"
+                              onClick={() => setImgPreview(d.url!)}
+                            />
+                          ) : (
+                            <dd className="mt-0.5 text-sm text-gray-400">Tidak ada</dd>
+                          )
+                        ) : (
+                          <dd className="mt-0.5 text-sm text-gray-900">{d.value || '-'}</dd>
+                        )}
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              )}
             </Card>
           )}
 

@@ -43,7 +43,7 @@ function get_json_body(): array {
  * Dicek dari: (1) URL $_GET['_method'], (2) JSON body '_method'.
  * Fallback ke body diperlukan bila server/WAF memblokir parameter URL berawalan underscore.
  */
-function get_effective_method(): string {
+function get_effective_method() {
   $method = $_SERVER['REQUEST_METHOD'];
   if ($method !== 'POST') return $method;
 

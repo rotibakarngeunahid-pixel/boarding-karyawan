@@ -11,6 +11,9 @@
 import type {
   ApiResponse,
   DashboardStats,
+  FieldCondition,
+  FieldTipe,
+  FormField,
   HasilTes,
   Invitation,
   InvitationVerify,
@@ -146,6 +149,46 @@ export function createInvitation(payload: {
 
 export function deleteInvitation(id: number): Promise<null> {
   return request<null>('/api/onboarding/hapus.php', { method: 'POST', body: { id } });
+}
+
+// ── FORM BUILDER ONBOARDING ─────────────────────────────
+export interface FormFieldPayload {
+  label?: string;
+  tipe?: FieldTipe;
+  opsi?: string[];
+  placeholder?: string | null;
+  bantuan?: string | null;
+  wajib?: boolean;
+  aktif?: boolean;
+  show_if?: FieldCondition | null;
+  wajib_if?: FieldCondition | null;
+}
+
+/** Daftar field (admin, termasuk nonaktif). */
+export function getFormFields(): Promise<FormField[]> {
+  return request<FormField[]>('/api/form/index.php');
+}
+
+/** Daftar field aktif (publik) untuk merender form onboarding. */
+export function getFormFieldsPublic(): Promise<FormField[]> {
+  return request<FormField[]>('/api/form/public.php', { auth: false });
+}
+
+export function createFormField(payload: FormFieldPayload): Promise<FormField> {
+  return request<FormField>('/api/form/index.php', { method: 'POST', body: payload });
+}
+
+export function updateFormField(id: number, payload: FormFieldPayload): Promise<FormField> {
+  return request<FormField>(`/api/form/index.php?id=${id}`, { method: 'PUT', body: payload });
+}
+
+export function reorderFormFields(reorder: { id: number; urutan: number }[]): Promise<null> {
+  // id query hanya placeholder; backend memproses array reorder
+  return request<null>('/api/form/index.php?id=0', { method: 'PUT', body: { reorder } });
+}
+
+export function deleteFormField(id: number): Promise<null> {
+  return request<null>('/api/form/hapus.php', { method: 'POST', body: { id } });
 }
 
 export function verifyInvitation(token: string): Promise<InvitationVerify> {

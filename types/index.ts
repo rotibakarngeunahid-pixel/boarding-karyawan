@@ -89,8 +89,53 @@ export interface Karyawan {
   total_percobaan_tes: number;
   status: StatusKaryawan;
   invitation_status?: StatusInvitation | null;
+  data_tambahan?: DataTambahan[]; // jawaban field kustom
   created_at: string;
   updated_at: string;
+}
+
+// ── FORM BUILDER ONBOARDING ─────────────────────────────
+export type FieldTipe =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'tel'
+  | 'date'
+  | 'select'
+  | 'radio'
+  | 'file';
+
+export interface FieldCondition {
+  field: string; // field_key acuan
+  op: '=' | '!=';
+  value: string;
+}
+
+export interface FormField {
+  id: number;
+  field_key: string;
+  label: string;
+  tipe: FieldTipe;
+  opsi: string[]; // untuk select/radio
+  placeholder: string | null;
+  bantuan: string | null;
+  wajib: number; // 0/1
+  aktif: number; // 0/1
+  is_builtin: number; // 0/1 — tidak bisa dihapus
+  is_locked: number; // 0/1 — field inti: selalu wajib & aktif
+  kolom_db: string | null;
+  urutan: number;
+  show_if: FieldCondition | null;
+  wajib_if: FieldCondition | null;
+}
+
+/** Jawaban field kustom (snapshot di karyawan.data_tambahan) */
+export interface DataTambahan {
+  key: string;
+  label: string;
+  tipe: FieldTipe;
+  value: string;
+  url?: string; // untuk tipe file
 }
 
 export interface TesSoal {

@@ -7,6 +7,7 @@ import { Logo } from '@/components/shared/Logo';
 import {
   LayoutDashboard,
   UserPlus,
+  FormInput,
   Users,
   ClipboardList,
   FileText,
@@ -16,6 +17,7 @@ import {
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/onboarding', label: 'Onboarding', icon: UserPlus },
+  { href: '/onboarding/form', label: 'Formulir Onboarding', icon: FormInput },
   { href: '/karyawan', label: 'Karyawan', icon: Users },
   { href: '/tes', label: 'Tes Product Knowledge', icon: ClipboardList },
   { href: '/kontrak', label: 'Kontrak', icon: FileText },
@@ -23,6 +25,11 @@ const NAV = [
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+
+  // Pilih satu menu aktif = pencocokan paling spesifik (href terpanjang)
+  const activeHref = NAV.filter(
+    ({ href }) => pathname === href || pathname.startsWith(href + '/'),
+  ).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <>
@@ -50,7 +57,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
         <nav className="flex-1 space-y-1 p-3">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href + '/');
+            const active = href === activeHref;
             return (
               <Link
                 key={href}

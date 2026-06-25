@@ -32,6 +32,21 @@ try {
   $karyawan['foto_ktp_url']  = $karyawan['foto_ktp_path']  ? rtrim(UPLOAD_URL_BASE, '/') . '/' . $karyawan['foto_ktp_path']  : null;
   $karyawan['foto_diri_url'] = $karyawan['foto_diri_path'] ? rtrim(UPLOAD_URL_BASE, '/') . '/' . $karyawan['foto_diri_path'] : null;
 
+  // Data tambahan (field kustom): decode JSON + URL untuk jawaban tipe file
+  $tambahan = [];
+  if (!empty($karyawan['data_tambahan'])) {
+    $decoded = json_decode($karyawan['data_tambahan'], true);
+    if (is_array($decoded)) {
+      foreach ($decoded as $item) {
+        if (($item['tipe'] ?? '') === 'file' && !empty($item['value'])) {
+          $item['url'] = rtrim(UPLOAD_URL_BASE, '/') . '/' . $item['value'];
+        }
+        $tambahan[] = $item;
+      }
+    }
+  }
+  $karyawan['data_tambahan'] = $tambahan;
+
   // Riwayat tes
   $stmt = $db->prepare('SELECT * FROM tes_hasil WHERE karyawan_id = ? ORDER BY dikerjakan_at DESC');
   $stmt->execute([$id]);
