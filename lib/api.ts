@@ -145,7 +145,10 @@ export function createInvitation(payload: {
 }
 
 export function deleteInvitation(id: number): Promise<null> {
-  return request<null>(`/api/onboarding/index.php?id=${id}&_method=DELETE`, { method: 'POST' });
+  return request<null>(`/api/onboarding/index.php?id=${id}&_method=DELETE`, {
+    method: 'POST',
+    body: { _method: 'DELETE', id },
+  });
 }
 
 export function verifyInvitation(token: string): Promise<InvitationVerify> {
@@ -189,7 +192,10 @@ export function reorderSoal(reorder: { id: number; urutan: number }[]): Promise<
 }
 
 export function deleteSoal(id: number): Promise<null> {
-  return request<null>(`/api/tes/soal.php?id=${id}&_method=DELETE`, { method: 'POST' });
+  return request<null>(`/api/tes/soal.php?id=${id}&_method=DELETE`, {
+    method: 'POST',
+    body: { _method: 'DELETE', id },
+  });
 }
 
 // REVISI 4 — upload gambar lampiran soal (multipart). Mengembalikan path + url.
@@ -247,7 +253,10 @@ export function updateKaryawanStatus(id: number, status: string): Promise<null> 
 }
 
 export function deleteKaryawan(id: number): Promise<null> {
-  return request<null>(`/api/karyawan/index.php?id=${id}&_method=DELETE`, { method: 'POST' });
+  return request<null>(`/api/karyawan/index.php?id=${id}&_method=DELETE`, {
+    method: 'POST',
+    body: { _method: 'DELETE', id },
+  });
 }
 
 export function approveKaryawan(payload: {
@@ -293,7 +302,10 @@ export function getKontrakPreview(id: number): Promise<KontrakPreviewResponse> {
 }
 
 export function deleteKontrak(id: number): Promise<null> {
-  return request<null>(`/api/kontrak/index.php?id=${id}&_method=DELETE`, { method: 'POST' });
+  return request<null>(`/api/kontrak/index.php?id=${id}&_method=DELETE`, {
+    method: 'POST',
+    body: { _method: 'DELETE', id },
+  });
 }
 
 // REVISI 3 — template kontrak (.doc/.docx)

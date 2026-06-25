@@ -16,10 +16,7 @@ function soal_image_url(?string $path): ?string {
   return $path ? rtrim(UPLOAD_URL_BASE, '/') . '/' . $path : null;
 }
 
-$method = $_SERVER['REQUEST_METHOD'];
-if ($method === 'POST' && strtoupper($_GET['_method'] ?? '') === 'DELETE') {
-  $method = 'DELETE';
-}
+$method = get_effective_method();
 
 try {
   $db = getDB();
@@ -153,6 +150,7 @@ try {
 
   if ($method === 'DELETE') {
     $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+    if (!$id) { $b = get_json_body(); $id = isset($b['id']) ? (int) $b['id'] : 0; }
     if (!$id) json_error('Parameter id wajib.', 422);
 
     $stmt = $db->prepare('SELECT question_image FROM tes_soal WHERE id = ? LIMIT 1');

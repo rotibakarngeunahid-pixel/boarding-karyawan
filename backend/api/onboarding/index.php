@@ -8,10 +8,7 @@ require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/onboarding.php';
 require_once __DIR__ . '/../../helpers/delete.php';
 
-$method = $_SERVER['REQUEST_METHOD'];
-if ($method === 'POST' && strtoupper($_GET['_method'] ?? '') === 'DELETE') {
-  $method = 'DELETE';
-}
+$method = get_effective_method();
 $auth = require_auth();
 
 try {
@@ -78,6 +75,7 @@ try {
 
   if ($method === 'DELETE') {
     $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+    if (!$id) { $b = get_json_body(); $id = isset($b['id']) ? (int) $b['id'] : 0; }
     if (!$id) json_error('Parameter id wajib.', 422);
 
     $db->beginTransaction();
