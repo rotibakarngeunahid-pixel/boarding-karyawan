@@ -8,6 +8,12 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/onboarding.php';
+
+// REVISI 4: bangun URL penuh gambar soal dari path relatif.
+function soal_image_url(?string $path): ?string {
+  return $path ? rtrim(UPLOAD_URL_BASE, '/') . '/' . $path : null;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -20,6 +26,10 @@ try {
 
     if ($is_admin) {
       $rows = $db->query('SELECT * FROM tes_soal ORDER BY urutan ASC, id ASC')->fetchAll();
+      foreach ($rows as &$r) {
+        $r['question_image_url'] = soal_image_url($r['question_image'] ?? null);
+      }
+      unset($r);
       json_success($rows);
     }
 
@@ -30,10 +40,8 @@ try {
       json_error('Token dan karyawan_id wajib disertakan.', 422);
     }
 
-    // Validasi token
-    $stmt = $db->prepare('SELECT id, expires_at FROM onboarding_invitations WHERE token = ? LIMIT 1');
-    $stmt->execute([$token]);
-    if (!$stmt->fetch()) {
+    // Validasi token / slug (REVISI 6)
+    if (!find_invitation_by_ref($db, $token)) {
       json_error('Token tidak valid.', 403);
     }
 
@@ -53,10 +61,14 @@ try {
     }
 
     $stmt = $db->query(
-      'SELECT id, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, poin, urutan
+      'SELECT id, pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, question_image, poin, urutan
        FROM tes_soal WHERE aktif = 1 ORDER BY urutan ASC, id ASC'
     );
     $soal = $stmt->fetchAll();
+    foreach ($soal as &$s) {
+      $s['question_image_url'] = soal_image_url($s['question_image'] ?? null);
+    }
+    unset($s);
 
     json_success([
       'soal'        => $soal,
@@ -83,12 +95,13 @@ try {
     }
 
     $stmt = $db->prepare(
-      'INSERT INTO tes_soal (pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, jawaban_benar, poin, urutan, aktif)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO tes_soal (pertanyaan, pilihan_a, pilihan_b, pilihan_c, pilihan_d, question_image, jawaban_benar, poin, urutan, aktif)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     $stmt->execute([
       $body['pertanyaan'],
       $body['pilihan_a'], $body['pilihan_b'], $body['pilihan_c'], $body['pilihan_d'],
+      $body['question_image'] ?? null, // REVISI 4
       strtolower($body['jawaban_benar']),
       isset($body['poin']) ? (int) $body['poin'] : 10,
       isset($body['urutan']) ? (int) $body['urutan'] : 0,
@@ -117,11 +130,12 @@ try {
     }
     $stmt = $db->prepare(
       'UPDATE tes_soal SET pertanyaan=?, pilihan_a=?, pilihan_b=?, pilihan_c=?, pilihan_d=?,
-        jawaban_benar=?, poin=?, urutan=?, aktif=? WHERE id=?'
+        question_image=?, jawaban_benar=?, poin=?, urutan=?, aktif=? WHERE id=?'
     );
     $stmt->execute([
       $body['pertanyaan'],
       $body['pilihan_a'], $body['pilihan_b'], $body['pilihan_c'], $body['pilihan_d'],
+      $body['question_image'] ?? null, // REVISI 4
       strtolower($body['jawaban_benar']),
       isset($body['poin']) ? (int) $body['poin'] : 10,
       isset($body['urutan']) ? (int) $body['urutan'] : 0,

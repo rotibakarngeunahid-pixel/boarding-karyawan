@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD, EmptyRow } from '@/components/ui/table';
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
+import { TemplateKontrakCard } from '@/components/shared/TemplateKontrakCard';
 import { listKontrak } from '@/lib/api';
 import { CABANG_LIST, type Kontrak } from '@/types';
 import { exportToCSV, formatTanggal, cn } from '@/lib/utils';
@@ -78,6 +79,11 @@ export default function KontrakPage() {
         </div>
       }
     >
+      {/* REVISI 3 — kelola template surat kontrak */}
+      <div className="mb-4">
+        <TemplateKontrakCard />
+      </div>
+
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">Semua Status</option>

@@ -11,11 +11,12 @@ define('UPLOAD_MAX_SIZE', 5 * 1024 * 1024); // 5MB
 /**
  * Handle upload satu file gambar.
  *
- * @param array  $file   entri dari $_FILES['xxx']
- * @param string $subdir subfolder di dalam uploads/ (mis. 'ktp', 'foto_diri')
+ * @param array  $file     entri dari $_FILES['xxx']
+ * @param string $subdir   subfolder di dalam uploads/ (mis. 'ktp', 'foto_diri', 'soal')
+ * @param int    $maxBytes batas ukuran file (default 5MB)
  * @return array { ok: bool, filename?: string, path?: string, url?: string, error?: string }
  */
-function handle_upload(array $file, string $subdir): array {
+function handle_upload(array $file, string $subdir, int $maxBytes = UPLOAD_MAX_SIZE): array {
   if (!isset($file['error']) || is_array($file['error'])) {
     return ['ok' => false, 'error' => 'Parameter file tidak valid.'];
   }
@@ -32,8 +33,9 @@ function handle_upload(array $file, string $subdir): array {
       return ['ok' => false, 'error' => 'Gagal mengunggah file.'];
   }
 
-  if ($file['size'] > UPLOAD_MAX_SIZE) {
-    return ['ok' => false, 'error' => 'Ukuran file maksimal 5MB.'];
+  if ($file['size'] > $maxBytes) {
+    $mb = round($maxBytes / (1024 * 1024), 1);
+    return ['ok' => false, 'error' => "Ukuran file maksimal {$mb}MB."];
   }
 
   // Deteksi MIME asli dari isi file, bukan dari ekstensi/klien.

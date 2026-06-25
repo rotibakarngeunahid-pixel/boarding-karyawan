@@ -63,7 +63,7 @@ export default function TesAdminPage() {
             className={cn(
               'border-b-2 px-4 py-2.5 text-sm font-medium capitalize transition-colors',
               tab === t
-                ? 'border-rbn-primary text-rbn-dark'
+                ? 'border-rbn-primary text-rbn-primary'
                 : 'border-transparent text-gray-500 hover:text-gray-700',
             )}
           >

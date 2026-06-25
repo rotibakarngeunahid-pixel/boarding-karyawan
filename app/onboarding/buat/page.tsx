@@ -40,7 +40,8 @@ export default function BuatUndanganPage() {
         catatan: catatan.trim() || undefined,
         expires_in_days: Number(expiresInDays),
       });
-      setResultLink(onboardingLink(inv.token));
+      // REVISI 6 — pakai slug pendek bila tersedia
+      setResultLink(onboardingLink(inv.test_slug ?? inv.token));
       toast.success('Undangan berhasil dibuat!');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal membuat undangan.');

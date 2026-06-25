@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --rbn-primary: #d4a017;
+  --rbn-primary: #d32f2f; /* merah */
+  --rbn-secondary: #ffc107; /* kuning */
   --rbn-dark: #1a1a1a;
 }
 

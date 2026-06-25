@@ -18,6 +18,7 @@ import type {
   KaryawanDetailResponse,
   Kontrak,
   KontrakDetailResponse,
+  KontrakTemplate,
   LoginResponse,
   SoalPublicResponse,
   TesPengaturan,
@@ -186,6 +187,17 @@ export function deleteSoal(id: number): Promise<null> {
   return request<null>(`/api/tes/soal.php?id=${id}`, { method: 'DELETE' });
 }
 
+// REVISI 4 — upload gambar lampiran soal (multipart). Mengembalikan path + url.
+export function uploadSoalGambar(file: File): Promise<{ path: string; url: string }> {
+  const fd = new FormData();
+  fd.append('gambar', file);
+  return request<{ path: string; url: string }>('/api/tes/upload-gambar.php', {
+    method: 'POST',
+    body: fd,
+    isFormData: true,
+  });
+}
+
 export function getPengaturan(): Promise<TesPengaturan> {
   return request<TesPengaturan>('/api/tes/pengaturan.php');
 }
@@ -265,6 +277,49 @@ export function createKontrak(payload: {
 
 export function getKontrakDetail(id: number): Promise<KontrakDetailResponse> {
   return request<KontrakDetailResponse>(`/api/kontrak/detail.php?id=${id}`);
+}
+
+// REVISI 3 — template kontrak (.doc/.docx)
+export function getKontrakTemplate(): Promise<KontrakTemplate | null> {
+  return request<KontrakTemplate | null>('/api/kontrak/template.php');
+}
+
+export function uploadKontrakTemplate(file: File): Promise<{ id: number; original_name: string }> {
+  const fd = new FormData();
+  fd.append('template', file);
+  return request<{ id: number; original_name: string }>('/api/kontrak/template.php', {
+    method: 'POST',
+    body: fd,
+    isFormData: true,
+  });
+}
+
+/** Unduh surat kontrak (.docx/.doc) hasil isi template. Memicu download di browser. */
+export async function downloadKontrakDoc(kontrakId: number, nomorKontrak: string): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/api/kontrak/generate-doc.php?kontrak_id=${kontrakId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    let msg = 'Gagal membuat dokumen kontrak.';
+    try {
+      const j = await res.json();
+      msg = j.message || msg;
+    } catch {
+      /* respons biner */
+    }
+    throw new ApiError(msg, res.status);
+  }
+  const blob = await res.blob();
+  const ext = blob.type.includes('wordprocessingml') ? 'docx' : 'doc';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Kontrak_${nomorKontrak.replace(/[^A-Za-z0-9]+/g, '_')}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export function perpanjangKontrak(payload: {

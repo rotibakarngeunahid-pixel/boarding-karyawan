@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/shared/Logo';
 import {
   LayoutDashboard,
   UserPlus,
@@ -30,21 +31,19 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-rbn-dark text-white transition-transform lg:static lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-gray-200 bg-white text-gray-700 transition-transform lg:static lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+        <div className="flex h-16 items-center justify-between border-b border-gray-100 px-5">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rbn-primary text-base font-black text-rbn-dark">
-              RBN
-            </div>
+            <Logo className="h-9 w-9 rounded-lg" />
             <div className="leading-tight">
-              <p className="text-sm font-semibold">Boarding System</p>
-              <p className="text-[10px] text-white/50">Roti Bakar Ngeunah</p>
+              <p className="text-sm font-semibold text-gray-900">Boarding System</p>
+              <p className="text-[10px] text-gray-400">Roti Bakar Ngeunah</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/60 lg:hidden">
+          <button onClick={onClose} className="text-gray-400 lg:hidden">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -60,8 +59,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
                   active
-                    ? 'bg-rbn-primary font-semibold text-rbn-dark'
-                    : 'text-white/70 hover:bg-white/10 hover:text-white',
+                    ? 'bg-rbn-primary font-semibold text-white'
+                    : 'text-gray-600 hover:bg-red-50 hover:text-rbn-primary',
                 )}
               >
                 <Icon className="h-5 w-5 shrink-0" />
@@ -71,7 +70,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           })}
         </nav>
 
-        <div className="border-t border-white/10 p-4 text-[11px] text-white/40">
+        <div className="border-t border-gray-100 p-4 text-[11px] text-gray-400">
           © {new Date().getFullYear()} RBN Boarding System
         </div>
       </aside>

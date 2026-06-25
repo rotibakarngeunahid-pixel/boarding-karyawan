@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
+import { Logo } from '@/components/shared/Logo';
 import { ApiError, login, saveSession } from '@/lib/api';
 
 function LoginForm() {
@@ -37,17 +38,15 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-rbn-dark px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-rbn-primary text-xl font-black text-rbn-dark">
-            RBN
-          </div>
-          <h1 className="text-2xl font-bold text-white">Boarding System</h1>
-          <p className="mt-1 text-sm text-white/50">Roti Bakar Ngeunah</p>
+          <Logo className="mx-auto mb-4 h-20 w-20" />
+          <h1 className="text-2xl font-bold text-rbn-dark">Boarding System</h1>
+          <p className="mt-1 text-sm text-gray-500">Roti Bakar Ngeunah</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="rounded-2xl bg-white p-6 shadow-xl">
+        <form onSubmit={handleSubmit} className="rounded-2xl border-t-4 border-rbn-primary bg-white p-6 shadow-xl">
           <div className="mb-4">
             <Label htmlFor="username" required>
               Username
@@ -80,7 +79,7 @@ function LoginForm() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-white/30">
+        <p className="mt-6 text-center text-xs text-gray-400">
           © {new Date().getFullYear()} RBN Boarding System
         </p>
       </div>

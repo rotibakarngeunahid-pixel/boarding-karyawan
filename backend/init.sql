@@ -20,6 +20,7 @@ ON DUPLICATE KEY UPDATE username = username;
 CREATE TABLE IF NOT EXISTS onboarding_invitations (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   token       VARCHAR(64) UNIQUE NOT NULL,
+  test_slug   VARCHAR(80) UNIQUE,                 -- link tes pendek: kasir-nkam
   cabang      ENUM('Nusa Kambangan','Soputan','Pamogan') NOT NULL,
   posisi      VARCHAR(100) NOT NULL,
   catatan     TEXT,
@@ -85,6 +86,7 @@ CREATE TABLE IF NOT EXISTS tes_soal (
   pilihan_b      VARCHAR(500) NOT NULL,
   pilihan_c      VARCHAR(500) NOT NULL,
   pilihan_d      VARCHAR(500) NOT NULL,
+  question_image VARCHAR(255),                     -- gambar opsional per soal
   jawaban_benar  ENUM('a','b','c','d') NOT NULL,
   poin           INT DEFAULT 10,
   urutan         INT DEFAULT 0,
@@ -156,6 +158,16 @@ CREATE TABLE IF NOT EXISTS kontrak (
   FOREIGN KEY (karyawan_id) REFERENCES karyawan(id),
   FOREIGN KEY (created_by) REFERENCES users(id),
   FOREIGN KEY (kontrak_sebelumnya_id) REFERENCES kontrak(id)
+);
+
+CREATE TABLE IF NOT EXISTS kontrak_template (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  filename      VARCHAR(255) NOT NULL,
+  original_name VARCHAR(255) NOT NULL,
+  aktif         TINYINT(1) DEFAULT 1,
+  uploaded_by   INT,
+  uploaded_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (uploaded_by) REFERENCES users(id)
 );
 
 -- View: kontrak aktif + sisa hari

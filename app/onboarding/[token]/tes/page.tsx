@@ -38,10 +38,17 @@ function TesContent() {
     setLoading(true);
     setLoadError(null);
     setHasil(null);
+    // BUGFIX: reset state submit & dialog setiap sesi baru / retry agar tombol "Kumpulkan Jawaban" tidak stuck loading
+    setSubmitting(false);
+    setConfirmOpen(false);
+    // BUGFIX: bersihkan jawaban sesi sebelumnya agar tidak terbawa ke sesi retry
     setJawaban({});
+    // BUGFIX: hentikan timer sesi lama sebelum sesi baru dimulai
+    if (timerRef.current) clearInterval(timerRef.current);
     try {
       const res = await getSoalPublic(token, karyawanId);
       setData(res);
+      // BUGFIX: reset timer ke durasi penuh untuk sesi/percobaan baru
       setSecondsLeft(res.pengaturan.waktu_pengerjaan_menit * 60);
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat soal.');
@@ -61,7 +68,8 @@ function TesContent() {
   // Timer
   const submitRef = useRef<() => void>(() => {});
   useEffect(() => {
-    if (secondsLeft === null || hasil) return;
+    // BUGFIX: timer tidak jalan saat sudah ada hasil atau sedang mengirim (cegah auto-submit ganda)
+    if (secondsLeft === null || hasil || submitting) return;
     if (secondsLeft <= 0) {
       toast('Waktu habis! Jawaban dikumpulkan otomatis.', { icon: '⏰' });
       submitRef.current();
@@ -73,7 +81,7 @@ function TesContent() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [secondsLeft, hasil]);
+  }, [secondsLeft, hasil, submitting]);
 
   const doSubmit = useCallback(async () => {
     if (!data) return;
@@ -87,8 +95,11 @@ function TesContent() {
       };
       const res = await kerjakanTes(payload);
       setHasil(res);
+      // BUGFIX: reset state submit setelah berhasil agar bila peserta klik "Coba Lagi" tombol tidak stuck disabled
+      setSubmitting(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
+      // BUGFIX: tampilkan pesan error API ke peserta (sebelumnya bisa silent fail) + buka kunci tombol
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengirim jawaban.');
       setSubmitting(false);
     }
@@ -222,6 +233,16 @@ function TesContent() {
             <p className="font-medium text-gray-900">
               {idx + 1}. {s.pertanyaan}
             </p>
+            {/* REVISI 4 — gambar soal (responsif) */}
+            {s.question_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={s.question_image_url}
+                alt={`Gambar soal ${idx + 1}`}
+                className="mt-3 max-h-72 w-full rounded-lg border border-gray-200 object-contain"
+                style={{ maxWidth: '100%', height: 'auto' }}
+              />
+            )}
             <div className="mt-3 space-y-2">
               {OPSI.map(({ key, field }) => (
                 <label

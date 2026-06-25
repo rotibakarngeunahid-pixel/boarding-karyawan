@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, RefreshCw, FileText } from 'lucide-react';
+import { ArrowLeft, RefreshCw, FileText, FileDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Input, Textarea, Label } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
-import { ApiError, getKontrakDetail, perpanjangKontrak } from '@/lib/api';
+import { ApiError, downloadKontrakDoc, getKontrakDetail, perpanjangKontrak } from '@/lib/api';
 import type { Kontrak, KontrakDetailResponse } from '@/types';
 import { formatTanggal, formatRupiah, sisaHari, cn } from '@/lib/utils';
 
@@ -30,6 +30,21 @@ export default function KontrakDetailPage() {
   const [gaji, setGaji] = useState('');
   const [catatan, setCatatan] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false); // REVISI 3
+
+  // REVISI 3 — unduh surat kontrak dari template
+  async function handleDownloadDoc() {
+    if (!data) return;
+    setDownloading(true);
+    try {
+      await downloadKontrakDoc(data.kontrak.id, data.kontrak.nomor_kontrak);
+      toast.success('Surat kontrak diunduh.');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal mengunduh surat kontrak.');
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +127,9 @@ export default function KontrakDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge status={k.status}>{k.status}</Badge>
+                  <Button size="sm" variant="outline" onClick={handleDownloadDoc} loading={downloading}>
+                    <FileDown className="h-4 w-4" /> Surat Kontrak
+                  </Button>
                   {k.status === 'aktif' && (
                     <Button size="sm" onClick={() => setModalOpen(true)}>
                       <RefreshCw className="h-4 w-4" /> Perpanjang

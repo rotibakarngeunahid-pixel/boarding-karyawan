@@ -4,6 +4,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/onboarding.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $auth = require_auth();
@@ -41,14 +42,16 @@ try {
     if ($expires_in_days < 1) $expires_in_days = 7;
 
     $token = bin2hex(random_bytes(32));
+    $test_slug = generate_test_slug($db, $body['posisi']); // REVISI 6: link pendek
     $expires_at = (new DateTime())->modify("+{$expires_in_days} days")->format('Y-m-d H:i:s');
 
     $stmt = $db->prepare(
-      'INSERT INTO onboarding_invitations (token, cabang, posisi, catatan, expires_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO onboarding_invitations (token, test_slug, cabang, posisi, catatan, expires_at, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)'
     );
     $stmt->execute([
       $token,
+      $test_slug,
       $body['cabang'],
       $body['posisi'],
       $body['catatan'] ?? null,
@@ -60,6 +63,7 @@ try {
     json_success([
       'id'         => $id,
       'token'      => $token,
+      'test_slug'  => $test_slug,
       'cabang'     => $body['cabang'],
       'posisi'     => $body['posisi'],
       'status'     => 'pending',

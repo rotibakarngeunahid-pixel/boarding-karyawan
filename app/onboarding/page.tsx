@@ -13,9 +13,10 @@ import { listInvitations } from '@/lib/api';
 import type { Invitation } from '@/types';
 import { copyToClipboard, formatTanggalJam } from '@/lib/utils';
 
-function onboardingLink(token: string) {
+// REVISI 6 — pakai slug pendek bila ada, fallback ke token lama.
+function onboardingLink(ref: string) {
   const base = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-  return `${base}/onboarding/${token}`;
+  return `${base}/onboarding/${ref}`;
 }
 
 export default function OnboardingListPage() {
@@ -39,8 +40,8 @@ export default function OnboardingListPage() {
     load();
   }, [load]);
 
-  async function handleCopy(token: string) {
-    const ok = await copyToClipboard(onboardingLink(token));
+  async function handleCopy(ref: string) {
+    const ok = await copyToClipboard(onboardingLink(ref));
     ok ? toast.success('Link disalin!') : toast.error('Gagal menyalin link.');
   }
 
@@ -63,7 +64,7 @@ export default function OnboardingListPage() {
         <Table>
           <THead>
             <TR>
-              <TH>Token</TH>
+              <TH>Link Tes</TH>
               <TH>Cabang</TH>
               <TH>Posisi</TH>
               <TH>Status</TH>
@@ -77,7 +78,9 @@ export default function OnboardingListPage() {
             ) : (
               items.map((inv) => (
                 <TR key={inv.id}>
-                  <TD className="font-mono text-xs text-gray-500">{inv.token.slice(0, 8)}…</TD>
+                  <TD className="font-mono text-xs text-rbn-primary">
+                    /onboarding/{inv.test_slug ?? inv.token.slice(0, 8) + '…'}
+                  </TD>
                   <TD>{inv.cabang}</TD>
                   <TD className="font-medium text-gray-900">{inv.posisi}</TD>
                   <TD>

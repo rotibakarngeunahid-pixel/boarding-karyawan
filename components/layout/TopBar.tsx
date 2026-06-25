@@ -32,7 +32,7 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
           <p className="text-sm font-medium text-gray-900">{user?.nama ?? 'Admin'}</p>
           <p className="text-[11px] capitalize text-gray-400">{user?.role ?? 'admin'}</p>
         </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rbn-primary text-sm font-bold text-rbn-dark">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rbn-primary text-sm font-bold text-white">
           {(user?.nama ?? 'A').charAt(0).toUpperCase()}
         </div>
         <button

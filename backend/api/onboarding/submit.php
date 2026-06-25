@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/upload.php';
+require_once __DIR__ . '/../../helpers/onboarding.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   json_error('Method not allowed.', 405);
@@ -25,10 +26,8 @@ if (!in_array($data['jenis_kelamin'], $jk_valid, true)) {
 try {
   $db = getDB();
 
-  // 1. Verifikasi token masih valid (pending & belum kedaluwarsa)
-  $stmt = $db->prepare('SELECT id, cabang, posisi, status, expires_at FROM onboarding_invitations WHERE token = ? LIMIT 1');
-  $stmt->execute([$data['token']]);
-  $inv = $stmt->fetch();
+  // 1. Verifikasi token/slug masih valid (pending & belum kedaluwarsa) — REVISI 6
+  $inv = find_invitation_by_ref($db, $data['token']);
 
   if (!$inv) {
     json_error('Token tidak ditemukan.', 404);

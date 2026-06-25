@@ -8,12 +8,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Brand RBN
+        // Brand RBN — palet baru: Merah (primary), Kuning (secondary), Putih (base)
         rbn: {
-          primary: '#D4A017', // kuning keemasan
-          'primary-dark': '#B8860B',
-          'primary-light': '#F0C75E',
-          dark: '#1A1A1A',
+          primary: '#D32F2F', // merah (aksen kuat)
+          'primary-dark': '#B71C1C',
+          'primary-light': '#EF5350',
+          secondary: '#FFC107', // kuning (highlight)
+          'secondary-dark': '#FFA000',
+          dark: '#1A1A1A', // teks utama
         },
       },
       fontFamily: {

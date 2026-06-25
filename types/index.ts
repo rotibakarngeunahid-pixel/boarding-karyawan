@@ -43,6 +43,7 @@ export interface Invitation {
   expires_at: string;
   created_by: number | null;
   created_at: string;
+  test_slug?: string | null; // REVISI 6 — link tes pendek
   // Join dari karyawan (jika sudah submit)
   karyawan_id?: number | null;
   nama_lengkap?: string | null;
@@ -99,11 +100,19 @@ export interface TesSoal {
   pilihan_b: string;
   pilihan_c: string;
   pilihan_d: string;
+  question_image?: string | null; // REVISI 4 — path gambar (relatif)
+  question_image_url?: string | null; // URL penuh gambar
   jawaban_benar?: PilihanJawaban; // hanya untuk admin
   poin: number;
   urutan: number;
   aktif: number;
   created_at?: string;
+}
+
+export interface KontrakTemplate {
+  id: number;
+  original_name: string;
+  uploaded_at: string;
 }
 
 export interface TesPengaturan {

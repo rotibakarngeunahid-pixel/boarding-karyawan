@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Textarea, Label } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { FileUploadPreview } from '@/components/shared/FileUploadPreview';
+import { Logo } from '@/components/shared/Logo';
 import { LoadingState } from '@/components/ui/spinner';
 import { ApiError, submitOnboarding, verifyInvitation } from '@/lib/api';
 import { PROVINSI_LIST } from '@/lib/utils';
@@ -125,21 +126,21 @@ export default function OnboardingFormPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-2xl px-4">
         {/* Header */}
-        <div className="mb-6 rounded-2xl bg-rbn-dark p-6 text-white">
+        <div className="mb-6 rounded-2xl bg-rbn-primary p-6 text-white">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rbn-primary text-lg font-black text-rbn-dark">
-              RBN
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white p-1">
+              <Logo className="h-full w-full" />
             </div>
             <div>
               <h1 className="text-lg font-bold">Formulir Onboarding</h1>
-              <p className="text-sm text-white/60">Roti Bakar Ngeunah</p>
+              <p className="text-sm text-white/80">Roti Bakar Ngeunah</p>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            <span className="text-white/60">
+            <span className="text-white/80">
               Cabang: <span className="font-medium text-white">{inv.cabang}</span>
             </span>
-            <span className="text-white/60">
+            <span className="text-white/80">
               Posisi: <span className="font-medium text-white">{inv.posisi}</span>
             </span>
           </div>

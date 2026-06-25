@@ -1,7 +1,9 @@
 <?php
 // GET /api/onboarding/verify?token=xxx   (PUBLIC)
+// token bisa berupa token panjang lama ATAU test_slug pendek baru (REVISI 6)
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
+require_once __DIR__ . '/../../helpers/onboarding.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
   json_error('Method not allowed.', 405);
@@ -14,12 +16,7 @@ if ($token === '') {
 
 try {
   $db = getDB();
-  $stmt = $db->prepare(
-    'SELECT id, cabang, posisi, catatan, status, expires_at
-     FROM onboarding_invitations WHERE token = ? LIMIT 1'
-  );
-  $stmt->execute([$token]);
-  $inv = $stmt->fetch();
+  $inv = find_invitation_by_ref($db, $token);
 
   if (!$inv) {
     json_success(['valid' => false], 'Token tidak ditemukan.');

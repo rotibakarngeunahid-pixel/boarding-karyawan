@@ -119,7 +119,7 @@ export default function KaryawanDetailPage() {
                   onClick={() => setImgPreview(k.foto_diri_url!)}
                 />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-rbn-primary text-2xl font-bold text-rbn-dark">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-rbn-primary text-2xl font-bold text-white">
                   {k.nama_lengkap.charAt(0)}
                 </div>
               )}
@@ -155,7 +155,7 @@ export default function KaryawanDetailPage() {
                 className={cn(
                   'border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
                   tab === t.key
-                    ? 'border-rbn-primary text-rbn-dark'
+                    ? 'border-rbn-primary text-rbn-primary'
                     : 'border-transparent text-gray-500 hover:text-gray-700',
                 )}
               >

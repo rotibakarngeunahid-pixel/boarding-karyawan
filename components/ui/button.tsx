@@ -8,11 +8,11 @@ type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-rbn-primary text-rbn-dark hover:bg-rbn-primary-dark font-semibold',
-  secondary: 'bg-rbn-dark text-white hover:bg-gray-800',
+  primary: 'bg-rbn-primary text-white hover:bg-rbn-primary-dark font-semibold',
+  secondary: 'bg-rbn-secondary text-rbn-dark hover:bg-rbn-secondary-dark font-semibold',
   outline: 'border border-gray-300 bg-white text-gray-800 hover:bg-gray-50',
   ghost: 'text-gray-700 hover:bg-gray-100',
-  danger: 'bg-red-600 text-white hover:bg-red-700',
+  danger: 'bg-red-700 text-white hover:bg-red-800',
 };
 
 const sizes: Record<Size, string> = {
