@@ -110,6 +110,9 @@ npm run dev                    # http://localhost:3000
 
 Semua response berformat `{ success: bool, data?, message?, errors? }`.
 
+Untuk hosting yang memblokir HTTP `DELETE`, endpoint hapus juga menerima `POST` dengan query
+`_method=DELETE`, misalnya `/api/karyawan/index.php?id=1&_method=DELETE`.
+
 ### Catatan keamanan auth
 Token JWT disimpan di **dua tempat**: cookie `httpOnly` `rbn_auth_token` (dipakai `middleware.ts` untuk proteksi route) dan `localStorage` `rbn_token` (dipakai client untuk header `Authorization: Bearer`). Backend tetap memverifikasi JWT pada setiap endpoint admin — middleware hanya guard UX. Saat production, kunci CORS ke domain frontend yang fix dan gunakan `JWT_SECRET` yang sama di kedua sisi.
 

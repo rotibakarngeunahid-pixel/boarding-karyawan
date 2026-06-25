@@ -17,6 +17,9 @@ function soal_image_url(?string $path): ?string {
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
+if ($method === 'POST' && strtoupper($_GET['_method'] ?? '') === 'DELETE') {
+  $method = 'DELETE';
+}
 
 try {
   $db = getDB();

@@ -9,6 +9,9 @@ require_once __DIR__ . '/../../helpers/onboarding.php';
 require_once __DIR__ . '/../../helpers/delete.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
+if ($method === 'POST' && strtoupper($_GET['_method'] ?? '') === 'DELETE') {
+  $method = 'DELETE';
+}
 $auth = require_auth();
 
 try {
