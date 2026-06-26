@@ -5,28 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
-import { Input, Textarea, Label } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { FileUploadPreview } from '@/components/shared/FileUploadPreview';
 import { Logo } from '@/components/shared/Logo';
+import { DynamicField } from '@/components/shared/DynamicField';
 import { LoadingState } from '@/components/ui/spinner';
 import { ApiError, getFormFieldsPublic, submitOnboarding, verifyInvitation } from '@/lib/api';
-import { PROVINSI_LIST } from '@/lib/utils';
-import type { FieldCondition, FormField, InvitationVerify } from '@/types';
-
-// ── Evaluasi aturan kondisional (mirror logika backend) ──
-function ruleMatches(cond: FieldCondition | null, values: Record<string, string>): boolean {
-  if (!cond) return false;
-  const actual = values[cond.field] ?? '';
-  return cond.op === '!=' ? actual !== cond.value : actual === cond.value;
-}
-function isVisible(f: FormField, values: Record<string, string>): boolean {
-  return f.show_if ? ruleMatches(f.show_if, values) : true;
-}
-function isRequired(f: FormField, values: Record<string, string>): boolean {
-  if (f.wajib === 1) return true;
-  return f.wajib_if ? ruleMatches(f.wajib_if, values) : false;
-}
+import { isRequired, isVisible } from '@/lib/formLogic';
+import type { FormField, InvitationVerify } from '@/types';
 
 export default function OnboardingFormPage() {
   const params = useParams();
@@ -171,7 +155,7 @@ export default function OnboardingFormPage() {
             <p className="py-6 text-center text-sm text-gray-400">Belum ada pertanyaan pada formulir.</p>
           ) : (
             visibleFields.map((f) => (
-              <FieldRenderer
+              <DynamicField
                 key={f.id}
                 field={f}
                 required={isRequired(f, values)}
@@ -187,77 +171,6 @@ export default function OnboardingFormPage() {
           </Button>
         </form>
       </div>
-    </div>
-  );
-}
-
-function FieldRenderer({
-  field: f,
-  required,
-  value,
-  onValue,
-  onFile,
-}: {
-  field: FormField;
-  required: boolean;
-  value: string;
-  onValue: (v: string) => void;
-  onFile: (file: File | null) => void;
-}) {
-  // File: komponen sendiri sudah punya label
-  if (f.tipe === 'file') {
-    return (
-      <div>
-        <FileUploadPreview label={f.label} onChange={onFile} required={required} />
-        {f.bantuan && <p className="mt-1 text-xs text-gray-400">{f.bantuan}</p>}
-      </div>
-    );
-  }
-
-  const opsi =
-    f.field_key === 'provinsi_lahir' && f.opsi.length === 0 ? PROVINSI_LIST : f.opsi;
-
-  return (
-    <div>
-      <Label required={required}>{f.label}</Label>
-
-      {f.tipe === 'textarea' ? (
-        <Textarea rows={2} value={value} onChange={(e) => onValue(e.target.value)} placeholder={f.placeholder ?? ''} />
-      ) : f.tipe === 'select' ? (
-        <Select value={value} onChange={(e) => onValue(e.target.value)}>
-          <option value="">— Pilih —</option>
-          {opsi.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </Select>
-      ) : f.tipe === 'radio' ? (
-        <div className="space-y-2">
-          {f.opsi.map((o) => (
-            <label key={o} className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name={f.field_key}
-                checked={value === o}
-                onChange={() => onValue(o)}
-                className="h-4 w-4 accent-rbn-primary"
-              />
-              {o}
-            </label>
-          ))}
-        </div>
-      ) : (
-        <Input
-          type={f.tipe === 'number' ? 'number' : f.tipe === 'tel' ? 'tel' : f.tipe === 'date' ? 'date' : 'text'}
-          inputMode={f.tipe === 'tel' ? 'tel' : f.tipe === 'number' ? 'numeric' : undefined}
-          value={value}
-          onChange={(e) => onValue(e.target.value)}
-          placeholder={f.placeholder ?? ''}
-        />
-      )}
-
-      {f.bantuan && f.tipe !== 'radio' && <p className="mt-1 text-xs text-gray-400">{f.bantuan}</p>}
     </div>
   );
 }

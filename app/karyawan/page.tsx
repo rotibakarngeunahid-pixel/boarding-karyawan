@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Download, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Download, Trash2, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { Input } from '@/components/ui/input';
@@ -91,9 +92,16 @@ export default function KaryawanPage() {
     <AdminShell
       title="Karyawan"
       action={
-        <Button variant="outline" onClick={handleExport} disabled={!items.length}>
-          <Download className="h-4 w-4" /> Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={!items.length}>
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <Link href="/karyawan/tambah">
+            <Button>
+              <Plus className="h-4 w-4" /> Tambah Karyawan
+            </Button>
+          </Link>
+        </div>
       }
     >
       {/* Filter */}

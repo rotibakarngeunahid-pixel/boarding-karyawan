@@ -3,7 +3,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, FileText, FileDown, Eye, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  RefreshCw,
+  FileText,
+  FileDown,
+  Eye,
+  Trash2,
+  Copy,
+  CheckCircle2,
+  PenLine,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdminShell } from '@/components/layout/AdminShell';
 import { Button } from '@/components/ui/button';
@@ -21,7 +31,13 @@ import {
   perpanjangKontrak,
 } from '@/lib/api';
 import type { Kontrak, KontrakDetailResponse, KontrakPreviewResponse } from '@/types';
-import { formatTanggal, formatRupiah, sisaHari, cn } from '@/lib/utils';
+import { formatTanggal, formatTanggalJam, formatRupiah, sisaHari, copyToClipboard, cn } from '@/lib/utils';
+
+function signLink(token: string) {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  return `${base}/kontrak/tanda-tangan/${token}`;
+}
 
 export default function KontrakDetailPage() {
   const params = useParams();
@@ -215,6 +231,63 @@ export default function KontrakDetailPage() {
                   </div>
                 )}
               </dl>
+            </Card>
+
+            {/* Tanda tangan (e-signature) */}
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900">
+                  <PenLine className="h-4 w-4 text-rbn-primary" /> Tanda Tangan Karyawan
+                </h3>
+                {k.tanda_tangan_url ? (
+                  <Badge status="approved">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Ditandatangani
+                  </Badge>
+                ) : (
+                  <Badge status="pending">Belum ditandatangani</Badge>
+                )}
+              </div>
+
+              {k.tanda_tangan_url ? (
+                <div className="mt-4 space-y-3">
+                  <div className="inline-block rounded-xl border border-gray-200 bg-white p-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={k.tanda_tangan_url}
+                      alt="Tanda tangan"
+                      className="h-28 object-contain"
+                    />
+                  </div>
+                  <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                    <Field label="Ditandatangani oleh" value={k.nama_penandatangan} />
+                    <Field label="Waktu" value={formatTanggalJam(k.ditandatangani_at)} />
+                  </dl>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500">
+                    Bagikan link berikut ke karyawan agar mereka dapat membaca & menandatangani
+                    kontrak secara online.
+                  </p>
+                  {k.sign_token && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <code className="max-w-full truncate rounded-lg bg-gray-50 px-3 py-2 font-mono text-xs text-gray-600">
+                        {signLink(k.sign_token)}
+                      </code>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          const ok = await copyToClipboard(signLink(k.sign_token!));
+                          ok ? toast.success('Link tanda tangan disalin!') : toast.error('Gagal menyalin link.');
+                        }}
+                      >
+                        <Copy className="h-4 w-4" /> Salin Link
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
 
             {/* Timeline chain */}

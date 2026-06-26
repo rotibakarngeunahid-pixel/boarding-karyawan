@@ -17,10 +17,12 @@ backend/uploads/ktp/*
 backend/uploads/foto_diri/*
 backend/uploads/soal/*
 backend/uploads/templates/*
+backend/uploads/ttd/*
 !backend/uploads/ktp/.gitignore
 !backend/uploads/foto_diri/.gitignore
 !backend/uploads/soal/.gitignore
 !backend/uploads/templates/.gitignore
+!backend/uploads/ttd/.gitignore
 
 # ── OS / editor ──
 .DS_Store

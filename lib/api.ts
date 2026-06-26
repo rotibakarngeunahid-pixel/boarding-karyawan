@@ -22,6 +22,7 @@ import type {
   Kontrak,
   KontrakDetailResponse,
   KontrakPreviewResponse,
+  KontrakSignInfo,
   KontrakTemplate,
   LoginResponse,
   SoalPublicResponse,
@@ -285,6 +286,15 @@ export function getKaryawanDetail(id: number): Promise<KaryawanDetailResponse> {
   return request<KaryawanDetailResponse>(`/api/karyawan/detail.php?id=${id}`);
 }
 
+/** Input karyawan manual oleh admin (multipart, field mengikuti Formulir Onboarding). */
+export function createKaryawanManual(form: FormData): Promise<{ karyawan_id: number }> {
+  return request<{ karyawan_id: number }>('/api/karyawan/index.php', {
+    method: 'POST',
+    body: form,
+    isFormData: true,
+  });
+}
+
 export function updateKaryawanStatus(id: number, status: string): Promise<null> {
   return request<null>(`/api/karyawan/index.php?id=${id}`, { method: 'PUT', body: { status } });
 }
@@ -394,6 +404,23 @@ export function perpanjangKontrak(payload: {
 
 export function getExpiringKontrak(hari = 30): Promise<Kontrak[]> {
   return request<Kontrak[]>(`/api/kontrak/expiring.php?hari=${hari}`);
+}
+
+// ── TANDA TANGAN KONTRAK (publik, lewat link) ───────────
+export function getKontrakSignInfo(token: string): Promise<KontrakSignInfo> {
+  return request<KontrakSignInfo>(`/api/kontrak/sign.php?token=${encodeURIComponent(token)}`, {
+    auth: false,
+  });
+}
+
+export function submitKontrakSign(
+  token: string,
+  payload: { nama_penandatangan: string; signature: string; setuju: boolean },
+): Promise<{ signed: boolean; tanda_tangan_url: string }> {
+  return request<{ signed: boolean; tanda_tangan_url: string }>(
+    `/api/kontrak/sign.php?token=${encodeURIComponent(token)}`,
+    { method: 'POST', body: payload, auth: false },
+  );
 }
 
 // ── DASHBOARD (agregasi di client) ──────────────────────

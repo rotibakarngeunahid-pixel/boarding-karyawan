@@ -31,63 +31,10 @@ try {
     json_error('Link onboarding sudah kedaluwarsa.', 410);
   }
 
-  // 2. Muat definisi field aktif & evaluasi terhadap nilai yang dikirim
-  $fields = load_form_fields($db, true);
-  $values = $data; // untuk evaluasi aturan kondisional (field driver = teks/radio/select)
-
-  $missing  = [];
-  $columns  = [];   // builtin: kolom_db => nilai
-  $custom   = [];   // field kustom: snapshot {key,label,tipe,value}
-  $toUpload = [];   // file field yang akan diunggah di pass 2
-
-  foreach ($fields as $f) {
-    if (!field_visible($f, $values)) continue;          // tersembunyi -> lewati total
-    $key      = $f['field_key'];
-    $required = field_required($f, $values);
-
-    if ($f['tipe'] === 'file') {
-      $hasFile = isset($_FILES[$key])
-        && is_array($_FILES[$key])
-        && ($_FILES[$key]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
-      if ($required && !$hasFile) { $missing[] = $f['label']; continue; }
-      if ($hasFile) $toUpload[] = $f;
-      continue;
-    }
-
-    $val = isset($_POST[$key]) ? trim((string) $_POST[$key]) : '';
-    if ($required && $val === '') { $missing[] = $f['label']; continue; }
-
-    // Validasi pilihan untuk select/radio
-    if ($val !== '' && in_array($f['tipe'], ['select', 'radio'], true)
-        && !empty($f['opsi']) && !in_array($val, $f['opsi'], true)) {
-      json_error('Nilai tidak valid untuk: ' . $f['label'], 422);
-    }
-
-    if ($f['is_builtin'] && $f['kolom_db']) {
-      $columns[$f['kolom_db']] = ($val !== '') ? $val : null;
-    } elseif (!$f['is_builtin']) {
-      $custom[$key] = ['key' => $key, 'label' => $f['label'], 'tipe' => $f['tipe'], 'value' => $val];
-    }
-  }
-
-  if ($missing) {
-    json_error('Beberapa field wajib belum diisi.', 422, $missing);
-  }
-
-  // 3. Upload file (setelah semua validasi non-file lolos -> hindari file yatim)
-  foreach ($toUpload as $f) {
-    $key = $f['field_key'];
-    $subdir = $key === 'foto_ktp' ? 'ktp' : ($key === 'foto_diri' ? 'foto_diri' : 'custom');
-    $up = handle_upload($_FILES[$key], $subdir);
-    if (!$up['ok']) {
-      json_error($f['label'] . ': ' . $up['error'], 422);
-    }
-    if ($f['is_builtin'] && $f['kolom_db']) {
-      $columns[$f['kolom_db']] = $up['path'];
-    } elseif (!$f['is_builtin']) {
-      $custom[$key] = ['key' => $key, 'label' => $f['label'], 'tipe' => 'file', 'value' => $up['path']];
-    }
-  }
+  // 2-3. Validasi & kumpulkan jawaban form (dinamis) + upload file
+  $collected = collect_karyawan_columns($db, $_POST, $_FILES, false);
+  $columns = $collected['columns'];
+  $custom  = $collected['custom'];
 
   // 4. Kolom dari invitation (bukan bagian form) + data tambahan
   $columns['invitation_id'] = $inv['id'];

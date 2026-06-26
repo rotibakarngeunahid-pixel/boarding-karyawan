@@ -117,12 +117,13 @@ export default function KontrakPage() {
               <TH>Mulai</TH>
               <TH>Berakhir</TH>
               <TH>Sisa Hari</TH>
+              <TH>TTD</TH>
               <TH>Status</TH>
             </TR>
           </THead>
           <TBody>
             {items.length === 0 ? (
-              <EmptyRow colSpan={8}>Belum ada kontrak.</EmptyRow>
+              <EmptyRow colSpan={9}>Belum ada kontrak.</EmptyRow>
             ) : (
               items.map((k) => {
                 const sisa = k.sisa_hari ?? null;
@@ -150,6 +151,13 @@ export default function KontrakPage() {
                         </span>
                       ) : (
                         '-'
+                      )}
+                    </TD>
+                    <TD>
+                      {k.tanda_tangan_path ? (
+                        <Badge status="approved">Sudah</Badge>
+                      ) : (
+                        <Badge status="pending">Belum</Badge>
                       )}
                     </TD>
                     <TD>

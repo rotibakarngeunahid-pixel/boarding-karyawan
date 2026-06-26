@@ -20,38 +20,7 @@ try {
   $k = get_kontrak_document_data($db, $kontrak_id);
   if (!$k) json_error('Kontrak tidak ditemukan.', 404);
 
-  $map = kontrak_placeholder_map($k);
-  $tpl = get_active_kontrak_template($db);
-  $usingTemplate = false;
-  $templateName = null;
-  $warning = null;
-
-  if ($tpl) {
-    $templateName = $tpl['original_name'];
-    $path = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $tpl['filename'];
-    if (is_file($path)) {
-      try {
-        $text = kontrak_preview_from_template($path, $tpl['filename'], $map);
-        $usingTemplate = true;
-      } catch (Throwable $e) {
-        $text = kontrak_default_preview($k, $map);
-        $warning = $e->getMessage();
-      }
-    } else {
-      $text = kontrak_default_preview($k, $map);
-      $warning = 'File template tidak ditemukan di server.';
-    }
-  } else {
-    $text = kontrak_default_preview($k, $map);
-  }
-
-  json_success([
-    'text'           => $text,
-    'using_template' => $usingTemplate,
-    'template_name'  => $templateName,
-    'warning'        => $warning,
-    'placeholders'   => $map,
-  ]);
+  json_success(render_kontrak_preview($db, $k));
 } catch (Throwable $e) {
   json_error('Terjadi kesalahan server.', 500, [$e->getMessage()]);
 }

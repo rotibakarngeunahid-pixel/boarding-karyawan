@@ -21,6 +21,18 @@ function get_kontrak_document_data(PDO $db, int $kontrakId): ?array {
   return $row ?: null;
 }
 
+function get_kontrak_document_by_token(PDO $db, string $token): ?array {
+  $stmt = $db->prepare(
+    'SELECT k.*, kr.nama_lengkap, kr.nama_panggilan, kr.jenis_kelamin, kr.no_whatsapp,
+            kr.no_ktp, kr.alamat_tinggal, kr.provinsi_lahir, kr.tanggal_lahir
+     FROM kontrak k JOIN karyawan kr ON kr.id = k.karyawan_id
+     WHERE k.sign_token = ? LIMIT 1'
+  );
+  $stmt->execute([$token]);
+  $row = $stmt->fetch();
+  return $row ?: null;
+}
+
 function get_active_kontrak_template(PDO $db): ?array {
   $row = $db->query('SELECT * FROM kontrak_template WHERE aktif = 1 ORDER BY id DESC LIMIT 1')->fetch();
   return $row ?: null;
@@ -78,6 +90,47 @@ function kontrak_default_preview(array $k, array $map): string {
     "Gaji pokok: {$map['GAJI_POKOK']}." .
     $catatan
   );
+}
+
+/**
+ * Bangun teks preview kontrak untuk data $k: pakai template aktif bila ada,
+ * jika gagal/tidak ada -> format standar. Dipakai preview.php & sign.php.
+ *
+ * @return array{text:string, using_template:bool, template_name:?string, warning:?string, placeholders:array}
+ */
+function render_kontrak_preview(PDO $db, array $k): array {
+  $map = kontrak_placeholder_map($k);
+  $tpl = get_active_kontrak_template($db);
+  $usingTemplate = false;
+  $templateName = null;
+  $warning = null;
+
+  if ($tpl) {
+    $templateName = $tpl['original_name'];
+    $path = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $tpl['filename'];
+    if (is_file($path)) {
+      try {
+        $text = kontrak_preview_from_template($path, $tpl['filename'], $map);
+        $usingTemplate = true;
+      } catch (Throwable $e) {
+        $text = kontrak_default_preview($k, $map);
+        $warning = $e->getMessage();
+      }
+    } else {
+      $text = kontrak_default_preview($k, $map);
+      $warning = 'File template tidak ditemukan di server.';
+    }
+  } else {
+    $text = kontrak_default_preview($k, $map);
+  }
+
+  return [
+    'text'           => $text,
+    'using_template' => $usingTemplate,
+    'template_name'  => $templateName,
+    'warning'        => $warning,
+    'placeholders'   => $map,
+  ];
 }
 
 function kontrak_preview_from_template(string $path, string $filename, array $map): string {

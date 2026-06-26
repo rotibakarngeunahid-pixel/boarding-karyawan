@@ -4,6 +4,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/kontrak.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
   json_error('Method not allowed.', 405);
@@ -28,6 +29,12 @@ try {
   if (!$kontrak) {
     json_error('Kontrak tidak ditemukan.', 404);
   }
+
+  // Pastikan ada token tanda tangan (dibuat lazily agar kontrak lama pun bisa dibagikan).
+  $kontrak['sign_token'] = ensure_sign_token($db, (int) $kontrak['id'], $kontrak['sign_token'] ?? null);
+  $kontrak['tanda_tangan_url'] = !empty($kontrak['tanda_tangan_path'])
+    ? rtrim(UPLOAD_URL_BASE, '/') . '/' . $kontrak['tanda_tangan_path']
+    : null;
 
   // Bangun chain perpanjangan: telusuri ke belakang via kontrak_sebelumnya_id
   $chain = [];

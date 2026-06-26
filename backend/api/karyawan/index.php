@@ -1,12 +1,14 @@
 <?php
 // /api/karyawan
 //  GET (admin): list + filter ?cabang= ?status= ?search= ?status_tes=
+//  POST (admin): input karyawan manual (multipart, field mengikuti Formulir Onboarding)
 //  PUT (admin): ?id=N update status karyawan
 //  DELETE (admin): ?id=N hard delete karyawan + data terkait
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/delete.php';
+require_once __DIR__ . '/../../helpers/form.php';
 
 $method = get_effective_method();
 require_auth();
@@ -51,6 +53,45 @@ try {
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
     json_success($stmt->fetchAll());
+  }
+
+  if ($method === 'POST') {
+    // Input karyawan manual (tanpa undangan onboarding). Multipart: field mengikuti
+    // definisi Formulir Onboarding + field kerja yang diisi admin langsung.
+    $cabang_valid = ['Nusa Kambangan', 'Soputan', 'Pamogan'];
+    $cabang = trim((string) ($_POST['cabang'] ?? ''));
+    if (!in_array($cabang, $cabang_valid, true)) {
+      json_error('Cabang wajib dipilih dan harus valid.', 422, ['cabang']);
+    }
+
+    $status = $_POST['status'] ?? 'aktif';
+    if (!in_array($status, ['aktif', 'nonaktif', 'resigned'], true)) {
+      $status = 'aktif';
+    }
+
+    // Kumpulkan & validasi jawaban form (file opsional untuk input manual admin).
+    $collected = collect_karyawan_columns($db, $_POST, $_FILES, true);
+    $columns = $collected['columns'];
+    $custom  = $collected['custom'];
+
+    // Field kerja yang diisi admin (bukan bagian Formulir Onboarding).
+    $columns['invitation_id'] = null;
+    $columns['cabang']        = $cabang;
+    $columns['posisi']        = trim((string) ($_POST['posisi'] ?? '')) ?: null;
+    $columns['status']        = $status;
+    $tgl = trim((string) ($_POST['tanggal_bergabung'] ?? ''));
+    $columns['tanggal_bergabung'] = $tgl !== '' ? $tgl : null;
+    $columns['data_tambahan'] = $custom ? json_encode(array_values($custom), JSON_UNESCAPED_UNICODE) : null;
+
+    $cols = array_keys($columns);
+    $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+    $sql = 'INSERT INTO karyawan (' . implode(', ', $cols) . ') VALUES (' . $placeholders . ')';
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute(array_values($columns));
+    $karyawan_id = (int) $db->lastInsertId();
+
+    json_success(['karyawan_id' => $karyawan_id], 'Karyawan berhasil ditambahkan.', 201);
   }
 
   if ($method === 'PUT') {

@@ -28,15 +28,16 @@ onboarding-karyawan/
 
 - **Onboarding**: admin membuat undangan ber-token (per cabang/posisi, ada masa berlaku). Calon karyawan mengisi formulir publik + upload foto KTP & foto diri tanpa login.
 - **Tes Product Knowledge**: soal pilihan ganda dengan passing grade, timer, dan batas percobaan. Admin bisa CRUD soal + drag-and-drop urutan.
-- **Karyawan**: tabel + filter (cabang/status/status tes) + pencarian, detail bertab (identitas, riwayat tes, kontrak, approval), export CSV.
+- **Karyawan**: tabel + filter (cabang/status/status tes) + pencarian, detail bertab (identitas, riwayat tes, kontrak, approval), export CSV. **Input manual** oleh admin (tanpa undangan onboarding) lewat tombol *Tambah Karyawan* — formnya mengikuti definisi Formulir Onboarding.
 - **Kontrak (PKWT)**: nomor otomatis `PKWT/RBN/{tahun}/{urut}`, perpanjangan berantai, monitoring kontrak yang akan berakhir (banner 7 & 30 hari di dashboard), export CSV.
+- **Tanda tangan kontrak (e-signature)**: tiap kontrak punya link tanda tangan publik (mirip VIDA/Privy). Karyawan membuka link, membaca isi kontrak, lalu menandatangani dengan **corat-coret di kanvas** (mouse/sentuh). Tanda tangan + waktu + snapshot isi kontrak tersimpan, dan tampil di detail kontrak admin.
 
 ---
 
 ## Setup Backend (cPanel)
 
 1. **Upload** seluruh folder `backend/` ke `public_html/boarding-api/` (atau ke subdomain `api.boarding.…`).
-2. **Buat database** MySQL via cPanel → phpMyAdmin, lalu jalankan `backend/init.sql` (sudah termasuk seed admin & soal contoh).
+2. **Buat database** MySQL via cPanel → phpMyAdmin, lalu jalankan `backend/init.sql` (sudah termasuk seed admin & soal contoh). Pada database yang **sudah ada**, jalankan juga file migrasi sesuai fitur: `migrasi_revisi.sql`, `migrasi_form_builder.sql`, dan **`migrasi_kontrak_ttd.sql`** (kolom tanda tangan kontrak).
 3. **Kredensial DB** — set environment variable di cPanel, atau edit langsung `backend/config/database.php`:
    ```
    DB_HOST=localhost
@@ -46,7 +47,7 @@ onboarding-karyawan/
    JWT_SECRET=string_random_minimal_32_karakter
    UPLOAD_URL_BASE=https://api.boarding.rotibakarngeunah.my.id/uploads/
    ```
-4. **Folder upload** `uploads/ktp/` dan `uploads/foto_diri/` harus writable (`chmod 755`).
+4. **Folder upload** `uploads/ktp/`, `uploads/foto_diri/`, `uploads/templates/`, dan `uploads/ttd/` (tanda tangan) harus ada & writable (`chmod 755`). Folder dibuat otomatis saat upload pertama bila induk `uploads/` writable.
 5. Pastikan **mod_rewrite** & **mod_headers** aktif (untuk `.htaccess` CORS + preflight).
 6. **CORS** — di `backend/.htaccess`, saat production ganti `Access-Control-Allow-Origin "*"` dengan domain Vercel yang fix.
 7. **Ganti password admin** default. Generate hash baru:
@@ -98,7 +99,7 @@ npm run dev                    # http://localhost:3000
 | GET/PUT | `/api/tes/pengaturan.php` | admin |
 | POST | `/api/tes/kerjakan.php` | publik |
 | GET | `/api/tes/hasil.php` | admin |
-| GET/PUT/DELETE | `/api/karyawan/index.php` | admin |
+| GET/POST/PUT/DELETE | `/api/karyawan/index.php` | admin (POST = input manual, multipart) |
 | GET | `/api/karyawan/detail.php?id=` | admin |
 | POST | `/api/karyawan/approve.php` | admin |
 | GET/DELETE | `/api/kontrak/index.php` | admin |
@@ -107,6 +108,7 @@ npm run dev                    # http://localhost:3000
 | GET | `/api/kontrak/preview.php?kontrak_id=` | admin |
 | POST | `/api/kontrak/perpanjang.php` | admin |
 | GET | `/api/kontrak/expiring.php?hari=` | admin |
+| GET/POST | `/api/kontrak/sign.php?token=` | publik (baca & tanda tangan kontrak) |
 
 Semua response berformat `{ success: bool, data?, message?, errors? }`.
 

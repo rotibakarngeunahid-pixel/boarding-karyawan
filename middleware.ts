@@ -15,6 +15,11 @@ function isPublicOnboarding(pathname: string): boolean {
   return /^\/onboarding\/[^/]+(\/.*)?$/.test(pathname);
 }
 
+/** Halaman tanda tangan kontrak publik: /kontrak/tanda-tangan/<token> (diakses karyawan). */
+function isPublicSigning(pathname: string): boolean {
+  return /^\/kontrak\/tanda-tangan\/[^/]+\/?$/.test(pathname);
+}
+
 /** Decode payload JWT (tanpa verifikasi signature) untuk cek exp. */
 function isExpired(token: string): boolean {
   try {
@@ -41,7 +46,11 @@ export function middleware(req: NextRequest) {
   }
 
   // Route publik.
-  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) || isPublicOnboarding(pathname)) {
+  if (
+    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p)) ||
+    isPublicOnboarding(pathname) ||
+    isPublicSigning(pathname)
+  ) {
     return NextResponse.next();
   }
 

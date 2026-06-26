@@ -214,11 +214,33 @@ export interface Kontrak {
   catatan: string | null;
   created_by: number | null;
   created_at: string;
+  // Tanda tangan (e-signature)
+  sign_token?: string | null;
+  tanda_tangan_path?: string | null;
+  tanda_tangan_url?: string | null;
+  nama_penandatangan?: string | null;
+  ditandatangani_at?: string | null;
   // Join
   nama_lengkap?: string;
   nama_panggilan?: string | null;
   no_whatsapp?: string;
   sisa_hari?: number;
+}
+
+/** Respons publik halaman tanda tangan kontrak (GET /api/kontrak/sign). */
+export interface KontrakSignInfo {
+  valid: boolean;
+  signed: boolean;
+  nomor_kontrak: string;
+  nama_lengkap: string;
+  posisi: string;
+  cabang: Cabang;
+  tanggal_mulai: string;
+  tanggal_berakhir: string;
+  text: string;
+  nama_penandatangan: string | null;
+  ditandatangani_at: string | null;
+  tanda_tangan_url: string | null;
 }
 
 export interface KontrakDetailResponse {

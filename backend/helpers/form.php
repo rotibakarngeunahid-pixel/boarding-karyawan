@@ -73,3 +73,81 @@ function field_required(array $f, array $values): bool {
   }
   return false;
 }
+
+/**
+ * Kumpulkan & validasi jawaban form onboarding (dinamis) menjadi kolom karyawan.
+ * Dipakai bersama oleh submit.php (publik) & karyawan/index.php (input manual admin).
+ *
+ * - Mengevaluasi aturan show_if / wajib_if terhadap nilai yang dikirim.
+ * - Memvalidasi field wajib & pilihan select/radio.
+ * - Mengunggah file (foto_ktp/foto_diri/kustom) setelah validasi non-file lolos.
+ * - Memanggil json_error() langsung bila ada kesalahan (pola konsisten codebase).
+ *
+ * @param array $post         data teks ($_POST)
+ * @param array $files        data file ($_FILES)
+ * @param bool  $filesOptional true = file tidak diwajibkan meski definisi field wajib
+ *                             (dipakai untuk input manual admin yang fotonya menyusul).
+ * @return array{columns: array<string,mixed>, custom: array<int,array>}
+ */
+function collect_karyawan_columns(PDO $db, array $post, array $files, bool $filesOptional = false): array {
+  require_once __DIR__ . '/response.php';
+  require_once __DIR__ . '/upload.php';
+
+  $fields = load_form_fields($db, true);
+  $values = $post; // driver aturan kondisional (teks/radio/select)
+
+  $missing  = [];
+  $columns  = [];   // builtin: kolom_db => nilai
+  $custom   = [];   // field kustom: snapshot {key,label,tipe,value}
+  $toUpload = [];   // file field yang akan diunggah di pass 2
+
+  foreach ($fields as $f) {
+    if (!field_visible($f, $values)) continue;          // tersembunyi -> lewati total
+    $key      = $f['field_key'];
+    $required = field_required($f, $values);
+
+    if ($f['tipe'] === 'file') {
+      $hasFile = isset($files[$key])
+        && is_array($files[$key])
+        && ($files[$key]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
+      if ($required && !$hasFile && !$filesOptional) { $missing[] = $f['label']; continue; }
+      if ($hasFile) $toUpload[] = $f;
+      continue;
+    }
+
+    $val = isset($post[$key]) ? trim((string) $post[$key]) : '';
+    if ($required && $val === '') { $missing[] = $f['label']; continue; }
+
+    if ($val !== '' && in_array($f['tipe'], ['select', 'radio'], true)
+        && !empty($f['opsi']) && !in_array($val, $f['opsi'], true)) {
+      json_error('Nilai tidak valid untuk: ' . $f['label'], 422);
+    }
+
+    if ($f['is_builtin'] && $f['kolom_db']) {
+      $columns[$f['kolom_db']] = ($val !== '') ? $val : null;
+    } elseif (!$f['is_builtin']) {
+      $custom[$key] = ['key' => $key, 'label' => $f['label'], 'tipe' => $f['tipe'], 'value' => $val];
+    }
+  }
+
+  if ($missing) {
+    json_error('Beberapa field wajib belum diisi.', 422, $missing);
+  }
+
+  // Upload file setelah validasi non-file lolos -> hindari file yatim.
+  foreach ($toUpload as $f) {
+    $key = $f['field_key'];
+    $subdir = $key === 'foto_ktp' ? 'ktp' : ($key === 'foto_diri' ? 'foto_diri' : 'custom');
+    $up = handle_upload($files[$key], $subdir);
+    if (!$up['ok']) {
+      json_error($f['label'] . ': ' . $up['error'], 422);
+    }
+    if ($f['is_builtin'] && $f['kolom_db']) {
+      $columns[$f['kolom_db']] = $up['path'];
+    } elseif (!$f['is_builtin']) {
+      $custom[$key] = ['key' => $key, 'label' => $f['label'], 'tipe' => 'file', 'value' => $up['path']];
+    }
+  }
+
+  return ['columns' => $columns, 'custom' => $custom];
+}
