@@ -1,12 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FileText, Upload, Loader2 } from 'lucide-react';
+import { FileText, Upload, Loader2, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
-import { ApiError, getKontrakTemplates, uploadKontrakTemplate } from '@/lib/api';
+import { Modal } from '@/components/ui/modal';
+import { LoadingState } from '@/components/ui/spinner';
+import {
+  ApiError,
+  getKontrakTemplates,
+  previewKontrakTemplate,
+  uploadKontrakTemplate,
+} from '@/lib/api';
 import { useCabangOptions } from '@/lib/useCabang';
-import type { KontrakTemplate } from '@/types';
+import type { KontrakPreviewResponse, KontrakTemplate } from '@/types';
 
 const UMUM_KEY = '__umum__';
 const scopeKey = (cabang: string | null) => cabang ?? UMUM_KEY;
@@ -19,6 +26,12 @@ export function TemplateKontrakCard() {
   const [uploadingScope, setUploadingScope] = useState<string | null>(null); // key scope yang sedang upload
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingScope = useRef<string | null>(null); // cabang tujuan upload (null = Umum)
+
+  // Preview template (data contoh)
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewData, setPreviewData] = useState<KontrakPreviewResponse | null>(null);
+  const [previewLabel, setPreviewLabel] = useState('');
 
   function refresh() {
     return getKontrakTemplates()
@@ -50,6 +63,21 @@ export function TemplateKontrakCard() {
   function triggerUpload(scope: string | null) {
     pendingScope.current = scope;
     fileRef.current?.click();
+  }
+
+  async function handlePreview(scope: string | null, label: string) {
+    setPreviewLabel(label);
+    setPreviewData(null);
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    try {
+      setPreviewData(await previewKontrakTemplate(scope));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memuat preview.');
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
   }
 
   async function handleFile(file: File | null) {
@@ -110,14 +138,22 @@ export function TemplateKontrakCard() {
                     </p>
                   )}
                 </div>
-                <button
-                  onClick={() => triggerUpload(row.scope)}
-                  disabled={!!uploadingScope}
-                  className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-                >
-                  {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                  {tpl ? 'Ganti' : 'Upload'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handlePreview(row.scope, row.label)}
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                  >
+                    <Eye className="h-3.5 w-3.5" /> Preview
+                  </button>
+                  <button
+                    onClick={() => triggerUpload(row.scope)}
+                    disabled={!!uploadingScope}
+                    className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    {tpl ? 'Ganti' : 'Upload'}
+                  </button>
+                </div>
               </div>
             );
           })
@@ -141,6 +177,32 @@ export function TemplateKontrakCard() {
         <code className="text-gray-500">{'{{TANGGAL_BERAKHIR}}'}</code>,{' '}
         <code className="text-gray-500">{'{{GAJI_POKOK}}'}</code>, dll.
       </p>
+
+      <Modal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={`Preview Template — ${previewLabel}`}
+        className="max-w-3xl"
+      >
+        {previewLoading ? (
+          <LoadingState />
+        ) : previewData ? (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              Ini preview memakai <span className="font-semibold">data contoh</span> (nama, gaji, tanggal
+              hanya contoh). {previewData.using_template
+                ? `Memakai template: ${previewData.template_name ?? '-'}.`
+                : 'Belum ada file template untuk cabang ini — memakai format standar bawaan.'}
+              {previewData.warning ? ` ${previewData.warning}` : ''}
+            </div>
+            <div className="max-h-[60vh] whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-5 text-sm leading-7 text-gray-900">
+              {previewData.text}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">Preview tidak tersedia.</p>
+        )}
+      </Modal>
     </Card>
   );
 }

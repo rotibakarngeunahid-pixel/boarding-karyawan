@@ -273,6 +273,7 @@ export interface KontrakPreviewResponse {
   template_name: string | null;
   warning: string | null;
   placeholders: Record<string, string>;
+  contoh?: boolean; // true = preview memakai data contoh (preview template)
 }
 
 export interface KaryawanDetailResponse {

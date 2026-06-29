@@ -369,6 +369,12 @@ export function getKontrakPreview(id: number): Promise<KontrakPreviewResponse> {
   return request<KontrakPreviewResponse>(`/api/kontrak/preview.php?kontrak_id=${id}`);
 }
 
+/** Preview template kontrak per cabang memakai data contoh (cabang kosong = Umum). */
+export function previewKontrakTemplate(cabang?: string | null): Promise<KontrakPreviewResponse> {
+  const q = cabang ? `?cabang=${encodeURIComponent(cabang)}` : '';
+  return request<KontrakPreviewResponse>(`/api/kontrak/preview-template.php${q}`);
+}
+
 export function deleteKontrak(id: number): Promise<null> {
   return request<null>('/api/kontrak/hapus.php', { method: 'POST', body: { id } });
 }
