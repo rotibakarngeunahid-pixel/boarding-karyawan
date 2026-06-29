@@ -57,6 +57,18 @@ function kontrak_placeholder_map(array $k): array {
     ? 'Rp ' . number_format((float) $k['gaji_pokok'], 0, ',', '.')
     : '-';
 
+  // Lama kontrak dalam bulan (dari selisih tanggal mulai & berakhir).
+  $durasiBulan = '';
+  if (!empty($k['tanggal_mulai']) && !empty($k['tanggal_berakhir'])) {
+    $d1 = date_create((string) $k['tanggal_mulai']);
+    $d2 = date_create((string) $k['tanggal_berakhir']);
+    if ($d1 && $d2) {
+      $diff = date_diff($d1, $d2);
+      $months = $diff->y * 12 + $diff->m + ($diff->d > 0 ? 1 : 0);
+      $durasiBulan = (string) max(0, $months);
+    }
+  }
+
   return [
     'NAMA_LENGKAP'     => (string) $k['nama_lengkap'],
     'NAMA_PANGGILAN'   => (string) ($k['nama_panggilan'] ?? ''),
@@ -72,8 +84,48 @@ function kontrak_placeholder_map(array $k): array {
     'TANGGAL_MULAI'    => kontrak_fmt_tanggal_id($k['tanggal_mulai'] ?? null),
     'TANGGAL_BERAKHIR' => kontrak_fmt_tanggal_id($k['tanggal_berakhir'] ?? null),
     'GAJI_POKOK'       => $gaji,
+    'DURASI_BULAN'     => $durasiBulan,
     'TANGGAL_HARI_INI' => kontrak_fmt_tanggal_id(date('Y-m-d')),
   ];
+}
+
+/**
+ * Isi placeholder {{...}} ke dalam file .docx (mempertahankan format asli:
+ * tabel, bold, heading, dll.) lalu kembalikan biner .docx hasilnya.
+ * Mencakup body + header + footer dokumen.
+ *
+ * @throws RuntimeException bila gagal.
+ */
+function fill_docx_template(string $path, array $map): string {
+  if (!is_file($path)) throw new RuntimeException('File template tidak ditemukan di server.');
+
+  $tmp = tempnam(sys_get_temp_dir(), 'kontrak');
+  if (!$tmp || !copy($path, $tmp)) {
+    if ($tmp) @unlink($tmp);
+    throw new RuntimeException('Gagal menyiapkan dokumen.');
+  }
+
+  $zip = new ZipArchive();
+  if ($zip->open($tmp) !== true) {
+    @unlink($tmp);
+    throw new RuntimeException('Gagal membuka template .docx.');
+  }
+
+  for ($i = 0; $i < $zip->numFiles; $i++) {
+    $name = $zip->getNameIndex($i);
+    if ($name && preg_match('#^word/(document|header\d*|footer\d*)\.xml$#', $name)) {
+      $xml = $zip->getFromName($name);
+      if ($xml !== false && $xml !== '') {
+        $zip->addFromString($name, replace_kontrak_placeholders($xml, $map, true));
+      }
+    }
+  }
+  $zip->close();
+
+  $content = file_get_contents($tmp);
+  @unlink($tmp);
+  if ($content === false) throw new RuntimeException('Gagal membaca dokumen hasil.');
+  return $content;
 }
 
 function replace_kontrak_placeholders(string $content, array $map, bool $forXml = false): string {

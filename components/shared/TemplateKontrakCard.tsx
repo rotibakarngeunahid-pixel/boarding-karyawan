@@ -6,9 +6,11 @@ import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
 import { Modal } from '@/components/ui/modal';
 import { LoadingState } from '@/components/ui/spinner';
+import { DocxViewer } from '@/components/shared/DocxViewer';
 import {
   ApiError,
   getKontrakTemplates,
+  kontrakPreviewDocUrl,
   previewKontrakTemplate,
   uploadKontrakTemplate,
 } from '@/lib/api';
@@ -32,6 +34,7 @@ export function TemplateKontrakCard() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewData, setPreviewData] = useState<KontrakPreviewResponse | null>(null);
   const [previewLabel, setPreviewLabel] = useState('');
+  const [previewScope, setPreviewScope] = useState<string | null>(null);
 
   function refresh() {
     return getKontrakTemplates()
@@ -67,6 +70,7 @@ export function TemplateKontrakCard() {
 
   async function handlePreview(scope: string | null, label: string) {
     setPreviewLabel(label);
+    setPreviewScope(scope);
     setPreviewData(null);
     setPreviewOpen(true);
     setPreviewLoading(true);
@@ -195,8 +199,16 @@ export function TemplateKontrakCard() {
                 : 'Belum ada file template untuk cabang ini — memakai format standar bawaan.'}
               {previewData.warning ? ` ${previewData.warning}` : ''}
             </div>
-            <div className="max-h-[60vh] whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-5 text-sm leading-7 text-gray-900">
-              {previewData.text}
+            <div className="max-h-[65vh] overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <DocxViewer
+                url={kontrakPreviewDocUrl({ cabang: previewScope })}
+                auth
+                fallback={
+                  <div className="whitespace-pre-wrap bg-white p-5 text-sm leading-7 text-gray-900">
+                    {previewData.text}
+                  </div>
+                }
+              />
             </div>
           </div>
         ) : (

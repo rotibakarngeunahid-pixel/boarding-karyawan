@@ -375,6 +375,21 @@ export function previewKontrakTemplate(cabang?: string | null): Promise<KontrakP
   return request<KontrakPreviewResponse>(`/api/kontrak/preview-template.php${q}`);
 }
 
+// ── URL dokumen .docx (untuk ditampilkan apa adanya via DocxViewer) ──
+/** URL dokumen kontrak (.docx) untuk halaman tanda tangan publik. */
+export function kontrakSignDocUrl(token: string): string {
+  return `${API_URL}/api/kontrak/sign-doc.php?token=${encodeURIComponent(token)}`;
+}
+
+/** URL dokumen kontrak (.docx) untuk panel admin: kontrak asli atau preview template cabang. */
+export function kontrakPreviewDocUrl(params: { kontrak_id?: number; cabang?: string | null }): string {
+  if (params.kontrak_id) {
+    return `${API_URL}/api/kontrak/preview-doc.php?kontrak_id=${params.kontrak_id}`;
+  }
+  const c = params.cabang ? `&cabang=${encodeURIComponent(params.cabang)}` : '';
+  return `${API_URL}/api/kontrak/preview-doc.php?mode=template${c}`;
+}
+
 export function deleteKontrak(id: number): Promise<null> {
   return request<null>('/api/kontrak/hapus.php', { method: 'POST', body: { id } });
 }

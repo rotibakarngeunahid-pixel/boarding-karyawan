@@ -28,8 +28,10 @@ import {
   downloadKontrakDoc,
   getKontrakDetail,
   getKontrakPreview,
+  kontrakPreviewDocUrl,
   perpanjangKontrak,
 } from '@/lib/api';
+import { DocxViewer } from '@/components/shared/DocxViewer';
 import type { Kontrak, KontrakDetailResponse, KontrakPreviewResponse } from '@/types';
 import { formatTanggal, formatTanggalJam, formatRupiah, sisaHari, copyToClipboard, cn } from '@/lib/utils';
 
@@ -380,8 +382,16 @@ export default function KontrakDetailPage() {
                 : 'Menggunakan format preview standar.'}
               {preview.warning ? ` ${preview.warning}` : ''}
             </div>
-            <div className="max-h-[60vh] whitespace-pre-wrap rounded-lg border border-gray-200 bg-white p-5 text-sm leading-7 text-gray-900">
-              {preview.text}
+            <div className="max-h-[65vh] overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <DocxViewer
+                url={kontrakPreviewDocUrl({ kontrak_id: id })}
+                auth
+                fallback={
+                  <div className="whitespace-pre-wrap bg-white p-5 text-sm leading-7 text-gray-900">
+                    {preview.text}
+                  </div>
+                }
+              />
             </div>
           </div>
         ) : (

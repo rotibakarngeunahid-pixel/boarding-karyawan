@@ -36,32 +36,12 @@ try {
   $out_name = 'Kontrak_' . preg_replace('/[^A-Za-z0-9]+/', '_', $k['nomor_kontrak']) . '.' . $ext;
 
   if ($ext === 'docx') {
-    // .docx = arsip zip; teks ada di word/document.xml
-    $tmp = tempnam(sys_get_temp_dir(), 'kontrak');
-    copy($path, $tmp);
-
-    $zip = new ZipArchive();
-    if ($zip->open($tmp) !== true) {
-      json_error('Gagal membuka template .docx.', 500);
-    }
-    $xml = $zip->getFromName('word/document.xml');
-    if ($xml === false) {
-      $zip->close();
-      @unlink($tmp);
-      json_error('Isi template .docx tidak ditemukan.', 500);
-    }
-
-    // Ganti {{KEY}} walau placeholder terpecah antar-tag XML.
-    $xml = replace_kontrak_placeholders($xml, $map, true);
-
-    $zip->addFromString('word/document.xml', $xml);
-    $zip->close();
-
+    // Isi placeholder ke .docx sambil mempertahankan format (tabel, bold, dll.).
+    $content = fill_docx_template($path, $map);
     header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     header('Content-Disposition: attachment; filename="' . $out_name . '"');
-    header('Content-Length: ' . filesize($tmp));
-    readfile($tmp);
-    @unlink($tmp);
+    header('Content-Length: ' . strlen($content));
+    echo $content;
     exit;
   }
 

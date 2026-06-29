@@ -9,7 +9,8 @@ import { Input, Label } from '@/components/ui/input';
 import { Logo } from '@/components/shared/Logo';
 import { LoadingState } from '@/components/ui/spinner';
 import { SignaturePad, type SignaturePadHandle } from '@/components/shared/SignaturePad';
-import { ApiError, getKontrakSignInfo, submitKontrakSign } from '@/lib/api';
+import { DocxViewer } from '@/components/shared/DocxViewer';
+import { ApiError, getKontrakSignInfo, kontrakSignDocUrl, submitKontrakSign } from '@/lib/api';
 import { formatTanggal, formatTanggalJam } from '@/lib/utils';
 import type { KontrakSignInfo } from '@/types';
 
@@ -153,11 +154,18 @@ export default function TandaTanganKontrakPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl bg-white p-6 shadow-sm">
-            {/* Isi kontrak yang harus dibaca */}
+            {/* Isi kontrak yang harus dibaca — tampil apa adanya (format asli) */}
             <div>
               <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Isi Kontrak</p>
-              <div className="max-h-[45vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-gray-200 bg-gray-50 p-5 text-sm leading-7 text-gray-900">
-                {info.text}
+              <div className="max-h-[55vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <DocxViewer
+                  url={kontrakSignDocUrl(token)}
+                  fallback={
+                    <div className="whitespace-pre-wrap p-2 text-sm leading-7 text-gray-900">
+                      {info.text}
+                    </div>
+                  }
+                />
               </div>
             </div>
 

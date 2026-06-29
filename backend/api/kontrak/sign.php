@@ -91,12 +91,42 @@ try {
     // Snapshot teks kontrak saat ditandatangani (isi yang disetujui jadi permanen).
     $rendered = render_kontrak_preview($db, $k);
 
+    // Snapshot dokumen .docx (format asli) — agar yang ditampilkan = persis yang disetujui.
+    $docxPath = null;
+    try {
+      $tpl = get_active_kontrak_template($db, $k['cabang'] ?? null);
+      if ($tpl && strtolower(pathinfo($tpl['filename'], PATHINFO_EXTENSION)) === 'docx') {
+        $tplFile = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $tpl['filename'];
+        $bin = fill_docx_template($tplFile, kontrak_placeholder_map($k));
+        $dir = rtrim(UPLOAD_BASE, '/\\') . '/kontrak_docs/';
+        if (!is_dir($dir)) @mkdir($dir, 0755, true);
+        if (is_dir($dir) && is_writable($dir)) {
+          $fname = 'kontrak_' . (int) $k['id'] . '_' . bin2hex(random_bytes(4)) . '.docx';
+          if (file_put_contents($dir . $fname, $bin) !== false) {
+            $docxPath = 'kontrak_docs/' . $fname;
+          }
+        }
+      }
+    } catch (Throwable $eDoc) {
+      // snapshot .docx opsional — abaikan bila gagal.
+    }
+
     $stmt = $db->prepare(
       'UPDATE kontrak
          SET tanda_tangan_path = ?, nama_penandatangan = ?, ditandatangani_at = NOW(), snapshot_kontrak = ?
        WHERE id = ?'
     );
     $stmt->execute([$saved['path'], $nama, $rendered['text'], (int) $k['id']]);
+
+    // Simpan path snapshot .docx terpisah (tahan banting bila kolom belum ada / migrasi belum jalan).
+    if ($docxPath) {
+      try {
+        $db->prepare('UPDATE kontrak SET snapshot_docx_path = ? WHERE id = ?')
+           ->execute([$docxPath, (int) $k['id']]);
+      } catch (Throwable $eCol) {
+        // kolom snapshot_docx_path belum ada — abaikan.
+      }
+    }
 
     json_success([
       'signed'           => true,

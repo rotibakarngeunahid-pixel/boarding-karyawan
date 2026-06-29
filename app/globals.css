@@ -36,3 +36,19 @@ input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* ── Penampil dokumen kontrak (.docx) — docx-preview ── */
+.rbn-docx {
+  width: 100%;
+  overflow: hidden; /* tinggi diatur via JS setelah di-scale */
+}
+.rbn-docx .docx-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.rbn-docx .docx-wrapper > section.docx {
+  margin: 0 0 16px 0 !important;
+  box-shadow: none !important;
+  border: 1px solid #e5e7eb;
+}
