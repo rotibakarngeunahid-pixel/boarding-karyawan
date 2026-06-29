@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/delete.php';
 require_once __DIR__ . '/../../helpers/form.php';
+require_once __DIR__ . '/../../helpers/cabang.php';
 
 $method = get_effective_method();
 require_auth();
@@ -58,9 +59,8 @@ try {
   if ($method === 'POST') {
     // Input karyawan manual (tanpa undangan onboarding). Multipart: field mengikuti
     // definisi Formulir Onboarding + field kerja yang diisi admin langsung.
-    $cabang_valid = ['Nusa Kambangan', 'Soputan', 'Pamogan'];
     $cabang = trim((string) ($_POST['cabang'] ?? ''));
-    if (!in_array($cabang, $cabang_valid, true)) {
+    if ($cabang === '' || !cabang_is_valid($db, $cabang)) {
       json_error('Cabang wajib dipilih dan harus valid.', 422, ['cabang']);
     }
 

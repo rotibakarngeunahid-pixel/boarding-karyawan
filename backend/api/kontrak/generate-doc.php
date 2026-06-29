@@ -22,8 +22,8 @@ try {
   $k = get_kontrak_document_data($db, $kontrak_id);
   if (!$k) json_error('Kontrak tidak ditemukan.', 404);
 
-  // Template aktif
-  $tpl = get_active_kontrak_template($db);
+  // Template aktif untuk cabang kontrak (fallback ke template Umum).
+  $tpl = get_active_kontrak_template($db, $k['cabang'] ?? null);
   if (!$tpl) json_error('Belum ada template kontrak yang diunggah. Upload dulu di menu Kontrak.', 400);
 
   $path = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $tpl['filename'];

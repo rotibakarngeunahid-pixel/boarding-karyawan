@@ -2,8 +2,18 @@
 // RBN BOARDING SYSTEM — TypeScript Types
 // ============================================================
 
-export type Cabang = 'Nusa Kambangan' | 'Soputan' | 'Pamogan';
-export const CABANG_LIST: Cabang[] = ['Nusa Kambangan', 'Soputan', 'Pamogan'];
+// Cabang kini dinamis (bisa ditambah admin, mis. "Buduk"), jadi bertipe string.
+// CABANG_LIST hanya dipakai sebagai fallback awal sebelum daftar dari server termuat.
+export type Cabang = string;
+export const CABANG_LIST: string[] = ['Nusa Kambangan', 'Soputan', 'Pamogan'];
+
+/** Baris cabang yang dikelola admin (tabel `cabang`). */
+export interface CabangItem {
+  id: number;
+  nama: string;
+  aktif: number; // 0/1
+  urutan: number;
+}
 
 export type JenisKelamin = 'Laki-Laki' | 'Perempuan';
 export type StatusKaryawan = 'aktif' | 'nonaktif' | 'resigned';
@@ -44,6 +54,10 @@ export interface Invitation {
   created_by: number | null;
   created_at: string;
   test_slug?: string | null; // REVISI 6 — link tes pendek
+  // Term kontrak default (auto-buat kontrak saat lolos tes)
+  kontrak_durasi_bulan?: number | null;
+  kontrak_gaji_pokok?: string | number | null;
+  kontrak_catatan?: string | null;
   // Join dari karyawan (jika sudah submit)
   karyawan_id?: number | null;
   nama_lengkap?: string | null;
@@ -157,6 +171,7 @@ export interface TesSoal {
 export interface KontrakTemplate {
   id: number;
   original_name: string;
+  cabang: string | null; // null = template Umum (fallback semua cabang)
   uploaded_at: string;
 }
 
@@ -198,6 +213,9 @@ export interface HasilTes {
   dikerjakan_at?: string;
   nama_lengkap?: string;
   cabang?: Cabang;
+  // Auto-buat kontrak saat lolos: token untuk langsung tanda tangan
+  sign_token?: string | null;
+  kontrak_id?: number | null;
 }
 
 export interface Kontrak {

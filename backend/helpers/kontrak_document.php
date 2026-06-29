@@ -33,8 +33,22 @@ function get_kontrak_document_by_token(PDO $db, string $token): ?array {
   return $row ?: null;
 }
 
-function get_active_kontrak_template(PDO $db): ?array {
-  $row = $db->query('SELECT * FROM kontrak_template WHERE aktif = 1 ORDER BY id DESC LIMIT 1')->fetch();
+/**
+ * Template kontrak aktif untuk sebuah cabang.
+ * Prioritas: template khusus cabang -> template Umum (cabang IS NULL).
+ */
+function get_active_kontrak_template(PDO $db, ?string $cabang = null): ?array {
+  if ($cabang !== null && $cabang !== '') {
+    $stmt = $db->prepare(
+      'SELECT * FROM kontrak_template WHERE aktif = 1 AND cabang = ? ORDER BY id DESC LIMIT 1'
+    );
+    $stmt->execute([$cabang]);
+    $row = $stmt->fetch();
+    if ($row) return $row;
+  }
+  $row = $db->query(
+    'SELECT * FROM kontrak_template WHERE aktif = 1 AND cabang IS NULL ORDER BY id DESC LIMIT 1'
+  )->fetch();
   return $row ?: null;
 }
 
@@ -100,7 +114,7 @@ function kontrak_default_preview(array $k, array $map): string {
  */
 function render_kontrak_preview(PDO $db, array $k): array {
   $map = kontrak_placeholder_map($k);
-  $tpl = get_active_kontrak_template($db);
+  $tpl = get_active_kontrak_template($db, $k['cabang'] ?? null);
   $usingTemplate = false;
   $templateName = null;
   $warning = null;

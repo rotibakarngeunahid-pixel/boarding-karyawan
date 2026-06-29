@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -15,6 +15,7 @@ import { DynamicField } from '@/components/shared/DynamicField';
 import { ApiError, createKaryawanManual, getFormFieldsPublic } from '@/lib/api';
 import { isRequired, isVisible } from '@/lib/formLogic';
 import { CABANG_LIST, type FormField } from '@/types';
+import { useCabangOptions } from '@/lib/useCabang';
 
 export default function TambahKaryawanPage() {
   const router = useRouter();
@@ -25,7 +26,12 @@ export default function TambahKaryawanPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // Field kerja yang diisi admin langsung (di luar Formulir Onboarding).
+  const cabangOptions = useCabangOptions();
   const [cabang, setCabang] = useState<string>(CABANG_LIST[0]);
+  const cabangSelectOptions = useMemo(
+    () => (cabang && !cabangOptions.includes(cabang) ? [cabang, ...cabangOptions] : cabangOptions),
+    [cabangOptions, cabang],
+  );
   const [posisi, setPosisi] = useState('');
   const [tglBergabung, setTglBergabung] = useState('');
   const [status, setStatus] = useState('aktif');
@@ -131,7 +137,7 @@ export default function TambahKaryawanPage() {
               <div>
                 <Label required>Cabang</Label>
                 <Select value={cabang} onChange={(e) => setCabang(e.target.value)}>
-                  {CABANG_LIST.map((c) => (
+                  {cabangSelectOptions.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>

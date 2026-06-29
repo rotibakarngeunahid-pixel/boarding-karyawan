@@ -9,10 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD, EmptyRow } from '@/components/ui/table';
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
 import { getHasilTes } from '@/lib/api';
-import { CABANG_LIST, type HasilTes } from '@/types';
+import { type HasilTes } from '@/types';
+import { useCabangOptions } from '@/lib/useCabang';
 import { exportToCSV, formatTanggalJam } from '@/lib/utils';
 
 export default function HasilTesPage() {
+  const cabangOptions = useCabangOptions();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<HasilTes[]>([]);
@@ -73,7 +75,7 @@ export default function HasilTesPage() {
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Select value={cabang} onChange={(e) => setCabang(e.target.value)}>
           <option value="">Semua Cabang</option>
-          {CABANG_LIST.map((c) => (
+          {cabangOptions.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>

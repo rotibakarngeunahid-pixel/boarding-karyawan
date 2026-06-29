@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/kontrak.php';
+require_once __DIR__ . '/../../helpers/cabang.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   json_error('Method not allowed.', 405);
@@ -17,16 +18,16 @@ if ($missing) {
   json_error('Field kontrak belum lengkap.', 422, $missing);
 }
 
-$cabang_valid = ['Nusa Kambangan', 'Soputan', 'Pamogan'];
-if (!in_array($body['cabang'], $cabang_valid, true)) {
-  json_error('Cabang tidak valid.', 422);
-}
 if (strtotime($body['tanggal_berakhir']) <= strtotime($body['tanggal_mulai'])) {
   json_error('Tanggal berakhir harus setelah tanggal mulai.', 422);
 }
 
 try {
   $db = getDB();
+
+  if (!cabang_is_valid($db, $body['cabang'])) {
+    json_error('Cabang tidak valid.', 422);
+  }
 
   $stmt = $db->prepare('SELECT id FROM karyawan WHERE id = ? LIMIT 1');
   $stmt->execute([(int) $body['karyawan_id']]);

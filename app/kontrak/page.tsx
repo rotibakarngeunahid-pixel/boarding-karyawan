@@ -12,7 +12,8 @@ import { Table, THead, TBody, TR, TH, TD, EmptyRow } from '@/components/ui/table
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
 import { TemplateKontrakCard } from '@/components/shared/TemplateKontrakCard';
 import { listKontrak } from '@/lib/api';
-import { CABANG_LIST, type Kontrak } from '@/types';
+import { type Kontrak } from '@/types';
+import { useCabangOptions } from '@/lib/useCabang';
 import { exportToCSV, formatTanggal, cn } from '@/lib/utils';
 
 function rowClass(k: Kontrak) {
@@ -25,6 +26,7 @@ function rowClass(k: Kontrak) {
 
 export default function KontrakPage() {
   const router = useRouter();
+  const cabangOptions = useCabangOptions();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Kontrak[]>([]);
@@ -94,7 +96,7 @@ export default function KontrakPage() {
         </Select>
         <Select value={cabang} onChange={(e) => setCabang(e.target.value)}>
           <option value="">Semua Cabang</option>
-          {CABANG_LIST.map((c) => (
+          {cabangOptions.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>

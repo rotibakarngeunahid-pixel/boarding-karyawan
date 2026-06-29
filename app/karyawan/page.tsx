@@ -14,7 +14,8 @@ import { Table, THead, TBody, TR, TH, TD, EmptyRow } from '@/components/ui/table
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
 import { ConfirmDialog } from '@/components/ui/modal';
 import { ApiError, deleteKaryawan, listKaryawan } from '@/lib/api';
-import { CABANG_LIST, type Karyawan } from '@/types';
+import { type Karyawan } from '@/types';
+import { useCabangOptions } from '@/lib/useCabang';
 import { exportToCSV, formatTanggal } from '@/lib/utils';
 
 function StatusTesBadge({ k }: { k: Karyawan }) {
@@ -28,6 +29,7 @@ function StatusTesBadge({ k }: { k: Karyawan }) {
 
 export default function KaryawanPage() {
   const router = useRouter();
+  const cabangOptions = useCabangOptions();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Karyawan[]>([]);
@@ -117,7 +119,7 @@ export default function KaryawanPage() {
         </div>
         <Select value={cabang} onChange={(e) => setCabang(e.target.value)}>
           <option value="">Semua Cabang</option>
-          {CABANG_LIST.map((c) => (
+          {cabangOptions.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>

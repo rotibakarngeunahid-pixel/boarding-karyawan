@@ -1,10 +1,12 @@
 <?php
-// /api/kontrak/template   (admin)  — REVISI 3
-//  GET  -> info template kontrak yang sedang aktif
-//  POST -> upload template .doc/.docx baru (multipart, field file: 'template')
+// /api/kontrak/template   (admin)  — REVISI 3 + per-cabang
+//  GET  -> daftar template aktif (Umum + tiap cabang)
+//  POST -> upload template .doc/.docx baru (multipart: file 'template', field 'cabang' opsional)
+//          cabang kosong = template Umum (dipakai bila cabang tak punya template sendiri).
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
+require_once __DIR__ . '/../../helpers/cabang.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $auth = require_auth();
@@ -13,15 +15,27 @@ try {
   $db = getDB();
 
   if ($method === 'GET') {
-    $row = $db->query(
-      'SELECT id, original_name, uploaded_at FROM kontrak_template WHERE aktif = 1 ORDER BY id DESC LIMIT 1'
-    )->fetch();
-    json_success($row ?: null);
+    // Satu template aktif per scope (Umum di-NULL-kan dulu, lalu per cabang).
+    $rows = $db->query(
+      'SELECT id, original_name, cabang, uploaded_at
+         FROM kontrak_template
+        WHERE aktif = 1
+        ORDER BY (cabang IS NULL) DESC, cabang ASC, id DESC'
+    )->fetchAll();
+    foreach ($rows as &$r) { $r['id'] = (int) $r['id']; }
+    json_success($rows);
   }
 
   if ($method === 'POST') {
     if (empty($_FILES['template'])) {
       json_error('File template wajib diunggah.', 422);
+    }
+
+    // Scope template: cabang tertentu atau Umum (NULL).
+    $cabang = isset($_POST['cabang']) ? trim((string) $_POST['cabang']) : '';
+    $cabang = $cabang !== '' ? $cabang : null;
+    if ($cabang !== null && !cabang_is_valid($db, $cabang)) {
+      json_error('Cabang tidak valid.', 422, ['cabang']);
     }
     $file = $_FILES['template'];
     if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -48,18 +62,24 @@ try {
       json_error('Gagal menyimpan template ke server.', 500);
     }
 
-    // Nonaktifkan template lama, simpan yang baru sebagai aktif.
+    // Nonaktifkan template lama PADA SCOPE YANG SAMA saja, simpan yang baru sebagai aktif.
     $db->beginTransaction();
-    $db->exec('UPDATE kontrak_template SET aktif = 0');
+    if ($cabang === null) {
+      $db->exec('UPDATE kontrak_template SET aktif = 0 WHERE cabang IS NULL');
+    } else {
+      $deact = $db->prepare('UPDATE kontrak_template SET aktif = 0 WHERE cabang = ?');
+      $deact->execute([$cabang]);
+    }
     $stmt = $db->prepare(
-      'INSERT INTO kontrak_template (filename, original_name, aktif, uploaded_by) VALUES (?, ?, 1, ?)'
+      'INSERT INTO kontrak_template (filename, original_name, cabang, aktif, uploaded_by) VALUES (?, ?, ?, 1, ?)'
     );
-    $stmt->execute([$filename, $orig, $auth['sub'] ?? null]);
+    $stmt->execute([$filename, $orig, $cabang, $auth['sub'] ?? null]);
     $db->commit();
 
     json_success([
       'id'            => (int) $db->lastInsertId(),
       'original_name' => $orig,
+      'cabang'        => $cabang,
     ], 'Template kontrak berhasil diunggah.', 201);
   }
 

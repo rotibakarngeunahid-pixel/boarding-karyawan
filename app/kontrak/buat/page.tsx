@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { LoadingState } from '@/components/ui/spinner';
 import { ApiError, createKontrak, listKaryawan } from '@/lib/api';
 import { CABANG_LIST, type Karyawan } from '@/types';
+import { useCabangOptions } from '@/lib/useCabang';
 import { cn } from '@/lib/utils';
 
 function BuatKontrakContent() {
@@ -28,8 +29,13 @@ function BuatKontrakContent() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
+  const cabangOptions = useCabangOptions();
   const [posisi, setPosisi] = useState('');
   const [cabang, setCabang] = useState<string>(CABANG_LIST[0]);
+  const cabangSelectOptions = useMemo(
+    () => (cabang && !cabangOptions.includes(cabang) ? [cabang, ...cabangOptions] : cabangOptions),
+    [cabangOptions, cabang],
+  );
   const [tglMulai, setTglMulai] = useState('');
   const [tglBerakhir, setTglBerakhir] = useState('');
   const [gaji, setGaji] = useState('');
@@ -192,7 +198,7 @@ function BuatKontrakContent() {
               <div>
                 <Label required>Cabang</Label>
                 <Select value={cabang} onChange={(e) => setCabang(e.target.value)}>
-                  {CABANG_LIST.map((c) => (
+                  {cabangSelectOptions.map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>

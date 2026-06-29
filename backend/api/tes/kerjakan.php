@@ -3,6 +3,7 @@
 // Body: { karyawan_id, jawaban: [{ soal_id, jawaban: 'a'|'b'|'c'|'d' }] }
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../helpers/response.php';
+require_once __DIR__ . '/../../helpers/kontrak.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   json_error('Method not allowed.', 405);
@@ -109,6 +110,23 @@ try {
 
   $db->commit();
 
+  // Jika LOLOS: buat kontrak otomatis (mulai hari ini, durasi dari undangan) lalu
+  // kembalikan token tanda tangan agar kandidat bisa LANGSUNG tanda tangan.
+  // Kegagalan di sini tidak boleh menggagalkan hasil tes — kontrak bisa dibuat manual.
+  $sign_token = null;
+  $kontrak_id = null;
+  if ($lulus) {
+    try {
+      $auto = auto_create_kontrak_on_pass($db, $karyawan_id);
+      if ($auto) {
+        $sign_token = $auto['sign_token'];
+        $kontrak_id = $auto['kontrak_id'];
+      }
+    } catch (Throwable $eKontrak) {
+      // diabaikan: hasil tes tetap dikembalikan
+    }
+  }
+
   $percobaan_baru = $percobaan + 1;
   json_success([
     'hasil_id'        => $hasil_id,
@@ -121,6 +139,8 @@ try {
     'passing_grade'   => $passing_grade,
     'sisa_percobaan'  => $max > 0 ? max(0, $max - $percobaan_baru) : null,
     'detail_jawaban'  => $detail,
+    'sign_token'      => $sign_token,
+    'kontrak_id'      => $kontrak_id,
   ], $lulus ? 'Selamat, kamu LULUS!' : 'Belum lulus, coba lagi ya.');
 } catch (Throwable $e) {
   if (isset($db) && $db->inTransaction()) $db->rollBack();

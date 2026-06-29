@@ -10,6 +10,7 @@
 
 import type {
   ApiResponse,
+  CabangItem,
   DashboardStats,
   FieldCondition,
   FieldTipe,
@@ -144,8 +145,31 @@ export function createInvitation(payload: {
   posisi: string;
   catatan?: string;
   expires_in_days: number;
+  kontrak_durasi_bulan?: number;
+  kontrak_gaji_pokok?: number;
+  kontrak_catatan?: string;
 }): Promise<Invitation> {
   return request<Invitation>('/api/onboarding/index.php', { method: 'POST', body: payload });
+}
+
+// ── CABANG (dinamis) ────────────────────────────────────
+export function listCabang(activeOnly = false): Promise<CabangItem[]> {
+  return request<CabangItem[]>(`/api/cabang/index.php${activeOnly ? '?aktif=1' : ''}`);
+}
+
+export function createCabang(nama: string): Promise<CabangItem> {
+  return request<CabangItem>('/api/cabang/index.php', { method: 'POST', body: { nama } });
+}
+
+export function updateCabang(
+  id: number,
+  payload: { nama?: string; aktif?: boolean; urutan?: number },
+): Promise<null> {
+  return request<null>(`/api/cabang/index.php?id=${id}`, { method: 'PUT', body: payload });
+}
+
+export function deleteCabang(id: number): Promise<null> {
+  return request<null>('/api/cabang/index.php', { method: 'POST', body: { id, _method: 'DELETE' } });
 }
 
 export function deleteInvitation(id: number): Promise<null> {
@@ -349,19 +373,22 @@ export function deleteKontrak(id: number): Promise<null> {
   return request<null>('/api/kontrak/hapus.php', { method: 'POST', body: { id } });
 }
 
-// REVISI 3 — template kontrak (.doc/.docx)
-export function getKontrakTemplate(): Promise<KontrakTemplate | null> {
-  return request<KontrakTemplate | null>('/api/kontrak/template.php');
+// REVISI 3 — template kontrak (.doc/.docx), per cabang + Umum
+export function getKontrakTemplates(): Promise<KontrakTemplate[]> {
+  return request<KontrakTemplate[]>('/api/kontrak/template.php');
 }
 
-export function uploadKontrakTemplate(file: File): Promise<{ id: number; original_name: string }> {
+export function uploadKontrakTemplate(
+  file: File,
+  cabang?: string | null,
+): Promise<{ id: number; original_name: string; cabang: string | null }> {
   const fd = new FormData();
   fd.append('template', file);
-  return request<{ id: number; original_name: string }>('/api/kontrak/template.php', {
-    method: 'POST',
-    body: fd,
-    isFormData: true,
-  });
+  if (cabang) fd.append('cabang', cabang);
+  return request<{ id: number; original_name: string; cabang: string | null }>(
+    '/api/kontrak/template.php',
+    { method: 'POST', body: fd, isFormData: true },
+  );
 }
 
 /** Unduh surat kontrak (.docx/.doc) hasil isi template. Memicu download di browser. */

@@ -1,8 +1,9 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, XCircle, Clock, FileSignature } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/modal';
@@ -157,9 +158,24 @@ function TesContent() {
               </Button>
             )}
 
-            <p className="mt-6 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
-              Tim RBN akan menghubungi kamu melalui WhatsApp. Terima kasih! 🙏
-            </p>
+            {lulus && hasil.sign_token ? (
+              <div className="mt-6">
+                <p className="mb-3 text-sm text-gray-600">
+                  Satu langkah lagi! Silakan baca & tanda tangani kontrak kerja Anda sekarang.
+                </p>
+                <Link href={`/kontrak/tanda-tangan/${hasil.sign_token}`}>
+                  <Button size="lg" className="w-full">
+                    <FileSignature className="h-5 w-5" /> Tanda Tangani Kontrak Sekarang
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <p className="mt-6 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                {lulus
+                  ? 'Selamat, kamu LULUS! Tim RBN akan menghubungi kamu melalui WhatsApp untuk proses kontrak. Terima kasih! 🙏'
+                  : 'Tim RBN akan menghubungi kamu melalui WhatsApp. Terima kasih! 🙏'}
+              </p>
+            )}
           </div>
 
           {/* Detail jawaban */}

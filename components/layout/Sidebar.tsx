@@ -11,6 +11,7 @@ import {
   Users,
   ClipboardList,
   FileText,
+  Store,
   X,
 } from 'lucide-react';
 
@@ -21,6 +22,7 @@ const NAV = [
   { href: '/karyawan', label: 'Karyawan', icon: Users },
   { href: '/tes', label: 'Tes Product Knowledge', icon: ClipboardList },
   { href: '/kontrak', label: 'Kontrak', icon: FileText },
+  { href: '/cabang', label: 'Cabang', icon: Store },
 ];
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
