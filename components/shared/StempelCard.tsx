@@ -7,7 +7,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   ApiError,
-  getKontrakTemplates,
   getStempel,
   saveStempelSettings,
   uploadStempel,
@@ -21,8 +20,6 @@ export function StempelCard() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
-  // Cabang yang punya template (agar editor menampilkan dokumen yang ada).
-  const [previewCabang, setPreviewCabang] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -30,11 +27,6 @@ export function StempelCard() {
       .then(setInfo)
       .catch(() => {})
       .finally(() => setLoading(false));
-    getKontrakTemplates()
-      .then((rows) => {
-        if (rows.length) setPreviewCabang(rows[0].cabang ?? '');
-      })
-      .catch(() => {});
   }, []);
 
   async function handleResetPos() {
@@ -148,7 +140,7 @@ export function StempelCard() {
         <StempelPositioner
           open={editorOpen}
           onClose={() => setEditorOpen(false)}
-          cabang={previewCabang}
+          cabang={info.preview_cabang ?? ''}
           stampUrl={info.url}
           settings={info.settings}
           onSaved={(s) => setInfo((prev) => (prev ? { ...prev, settings: s } : prev))}

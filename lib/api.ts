@@ -426,6 +426,7 @@ export interface StempelInfo {
   filename?: string;
   uploaded_at?: string;
   settings: StempelSettings;
+  preview_cabang?: string | null; // cabang template yg memuat {{STEMPEL}} (utk editor)
 }
 
 export function getStempel(): Promise<StempelInfo> {

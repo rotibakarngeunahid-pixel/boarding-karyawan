@@ -33,6 +33,31 @@ function get_stempel_info(): ?array {
   ];
 }
 
+/**
+ * Cabang dari template aktif PERTAMA yang memuat placeholder {{STEMPEL}}.
+ * Dipakai editor "Atur Posisi" agar menampilkan template yang benar.
+ * @return string|null nama cabang, '' tidak dipakai (null = template Umum), atau null bila tak ada.
+ */
+function stempel_preview_cabang(PDO $db): ?string {
+  $rows = $db->query(
+    'SELECT cabang, filename FROM kontrak_template WHERE aktif = 1
+     ORDER BY (cabang IS NULL) DESC, cabang ASC, id DESC'
+  )->fetchAll();
+  foreach ($rows as $r) {
+    $p = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $r['filename'];
+    if (!is_file($p)) continue;
+    $zip = new ZipArchive();
+    if ($zip->open($p) !== true) continue;
+    $x = (string) $zip->getFromName('word/document.xml');
+    $zip->close();
+    $xn = preg_replace_callback('/\{\{.*?\}\}/s', function ($m) {
+      return preg_replace('/<[^>]+>/', '', $m[0]);
+    }, $x);
+    if (strpos($xn, 'STEMPEL') !== false) return $r['cabang']; // null = Umum
+  }
+  return null;
+}
+
 /** Biner gambar stempel (untuk disisipkan ke .docx) atau null. */
 function get_stempel_binary(): ?string {
   $p = get_stempel_path();

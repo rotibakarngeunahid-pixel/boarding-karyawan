@@ -16,6 +16,9 @@ try {
     $resp = is_array($info) ? $info : [];
     $resp['has_stempel'] = $info !== null;
     $resp['settings'] = get_stempel_settings();
+    // Cabang template (yang memuat {{STEMPEL}}) untuk editor "Atur Posisi".
+    try { $resp['preview_cabang'] = stempel_preview_cabang(getDB()); }
+    catch (Throwable $e) { $resp['preview_cabang'] = null; }
     json_success($resp);
   }
 
