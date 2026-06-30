@@ -124,7 +124,7 @@ function docx_build_anchor_drawing(string $rid, int $cx, int $cy, int $id, strin
  * $offY (EMU) menggeser gambar ke bawah secara visual (position:relative) agar
  * bisa menumpuk teks di bawahnya — tanpa merusak posisi tengah/baris.
  */
-function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string $name, int $offY = 0): string {
+function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string $name, int $offX = 0, int $offY = 0): string {
   return '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" '
     . 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
     . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/>'
@@ -136,7 +136,7 @@ function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string 
     . '<pic:blipFill><a:blip r:embed="' . $rid . '" '
     . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
     . '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
-    . '<pic:spPr><a:xfrm><a:off x="0" y="' . $offY . '"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm>'
+    . '<pic:spPr><a:xfrm><a:off x="' . $offX . '" y="' . $offY . '"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm>'
     . '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
     . '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
 }
@@ -169,10 +169,17 @@ function fill_docx_template(
     throw new RuntimeException('Gagal membuka template .docx.');
   }
 
-  // Gambar yang akan disisipkan: placeholder => [binary, lebar target px].
+  // Gambar yang akan disisipkan: placeholder => [binary, lebar px, geser px].
   $imgs = [];
-  if ($signaturePng !== null && $signaturePng !== '') $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 190];
-  if ($stempelPng   !== null && $stempelPng   !== '') $imgs['STEMPEL']      = ['bin' => $stempelPng,   'w' => 120];
+  if ($signaturePng !== null && $signaturePng !== '') {
+    $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 190, 'offx' => 0, 'offy' => 0];
+  }
+  if ($stempelPng !== null && $stempelPng !== '') {
+    $ss = function_exists('get_stempel_settings')
+      ? get_stempel_settings()
+      : ['width' => 120, 'offx' => 0, 'offy' => 0];
+    $imgs['STEMPEL'] = ['bin' => $stempelPng, 'w' => (int) $ss['width'], 'offx' => (int) $ss['offx'], 'offy' => (int) $ss['offy']];
+  }
 
   $drawings = [];  // placeholder => markup
   $relNodes = [];
@@ -194,9 +201,10 @@ function fill_docx_template(
     $cy = $h * 9525;
     $zip->addFromString('word/media/' . $media, $img['bin']);
     $relNodes[] = '<Relationship Id="' . $rid . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $media . '"/>';
-    // Inline (andal & di tengah), didorong ke bawah agar menumpuk nama di bawahnya.
-    $offY = (int) round($cy * 0.55);
-    $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offY);
+    // Inline (andal & di tengah). Geser sesuai pengaturan (px -> EMU).
+    $offX = (int) round(((int) ($img['offx'] ?? 0)) * 9525);
+    $offY = (int) round(((int) ($img['offy'] ?? 0)) * 9525);
+    $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
   }
 
   // Tulis relationships SEKALI (hindari masalah getFromName setelah addFromString).

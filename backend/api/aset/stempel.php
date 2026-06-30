@@ -7,12 +7,25 @@ require_once __DIR__ . '/../../helpers/response.php';
 require_once __DIR__ . '/../../helpers/auth.php';
 require_once __DIR__ . '/../../helpers/aset.php';
 
-$method = $_SERVER['REQUEST_METHOD'];
+$method = get_effective_method();
 require_auth();
 
 try {
   if ($method === 'GET') {
-    json_success(get_stempel_info());
+    $info = get_stempel_info();
+    $resp = is_array($info) ? $info : [];
+    $resp['has_stempel'] = $info !== null;
+    $resp['settings'] = get_stempel_settings();
+    json_success($resp);
+  }
+
+  if ($method === 'PUT') {
+    // Simpan pengaturan posisi/ukuran stempel.
+    $body = get_json_body();
+    if (!save_stempel_settings($body)) {
+      json_error('Gagal menyimpan pengaturan stempel.', 500);
+    }
+    json_success(get_stempel_settings(), 'Pengaturan stempel disimpan.');
   }
 
   if ($method === 'POST') {

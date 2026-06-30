@@ -40,3 +40,37 @@ function get_stempel_binary(): ?string {
   $b = @file_get_contents($p);
   return ($b === false || $b === '') ? null : $b;
 }
+
+// ── Pengaturan posisi/ukuran stempel (disimpan di JSON sidecar) ──
+function stempel_meta_path(): string {
+  return aset_dir() . 'stempel_meta.json';
+}
+
+/** Ambil pengaturan stempel: width (px), offx (px), offy (px). Dengan default rapi. */
+function get_stempel_settings(): array {
+  $def = ['width' => 120, 'offx' => 0, 'offy' => 0];
+  $p = stempel_meta_path();
+  if (is_file($p)) {
+    $j = json_decode((string) @file_get_contents($p), true);
+    if (is_array($j)) {
+      return [
+        'width' => isset($j['width']) ? max(40, min(400, (int) $j['width'])) : $def['width'],
+        'offx'  => isset($j['offx'])  ? max(-400, min(400, (int) $j['offx'])) : 0,
+        'offy'  => isset($j['offy'])  ? max(-400, min(400, (int) $j['offy'])) : 0,
+      ];
+    }
+  }
+  return $def;
+}
+
+/** Simpan pengaturan stempel. */
+function save_stempel_settings(array $s): bool {
+  $dir = aset_dir();
+  if (!is_dir($dir)) @mkdir($dir, 0755, true);
+  $clean = [
+    'width' => max(40, min(400, (int) ($s['width'] ?? 120))),
+    'offx'  => max(-400, min(400, (int) ($s['offx'] ?? 0))),
+    'offy'  => max(-400, min(400, (int) ($s['offy'] ?? 0))),
+  ];
+  return @file_put_contents(stempel_meta_path(), json_encode($clean)) !== false;
+}
