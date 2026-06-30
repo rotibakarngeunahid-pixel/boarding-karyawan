@@ -43,12 +43,16 @@ input[type='number']::-webkit-outer-spin-button {
   overflow: hidden; /* tinggi diatur via JS setelah di-scale */
 }
 .rbn-docx .docx-wrapper {
+  width: max-content !important; /* menyusut ke lebar halaman (bukan kontainer) */
+  align-items: flex-start !important; /* halaman rata kiri agar skala pas */
   background: transparent !important;
   padding: 0 !important;
   margin: 0 !important;
+  transform-origin: top left;
 }
 .rbn-docx .docx-wrapper > section.docx {
   margin: 0 0 16px 0 !important;
-  box-shadow: none !important;
+  background: #fff !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12) !important;
   border: 1px solid #e5e7eb;
 }

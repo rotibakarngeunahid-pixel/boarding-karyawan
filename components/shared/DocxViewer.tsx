@@ -23,22 +23,38 @@ export function DocxViewer({
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>('loading');
 
-  // Skala dokumen agar muat lebar kontainer.
+  // Skala dokumen agar PAS lebar kontainer (tidak terpotong).
   const fit = useCallback(() => {
     const host = hostRef.current;
     if (!host) return;
     const wrapper = host.querySelector<HTMLElement>('.docx-wrapper');
     if (!wrapper) return;
+    const page = host.querySelector<HTMLElement>('section.docx');
+    // ukur ukuran asli tanpa transform dulu
     wrapper.style.transform = 'none';
-    const natW = wrapper.offsetWidth;
+    // lebar dokumen = lebar HALAMAN (bukan lebar kontainer)
+    const docW = page?.offsetWidth || wrapper.scrollWidth || wrapper.offsetWidth;
     const natH = wrapper.offsetHeight;
-    if (!natW) return;
+    if (!docW) return;
     const avail = host.clientWidth;
-    const s = Math.min(1, avail / natW);
+    const s = Math.min(1, avail / docW);
     wrapper.style.transformOrigin = 'top left';
     wrapper.style.transform = `scale(${s})`;
     host.style.height = `${natH * s}px`;
   }, []);
+
+  // Jalankan fit beberapa kali (font/gambar bisa selesai memuat belakangan).
+  const scheduleFit = useCallback(() => {
+    requestAnimationFrame(() => fit());
+    const t1 = setTimeout(fit, 120);
+    const t2 = setTimeout(fit, 350);
+    const t3 = setTimeout(fit, 800);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [fit]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,8 +90,7 @@ export function DocxViewer({
         });
         if (cancelled) return;
         setStatus('ok');
-        // beri waktu layout, lalu skala
-        requestAnimationFrame(() => fit());
+        scheduleFit();
       } catch {
         if (!cancelled) setStatus('error');
       }
@@ -84,14 +99,30 @@ export function DocxViewer({
     return () => {
       cancelled = true;
     };
-  }, [url, auth, fit]);
+  }, [url, auth, scheduleFit]);
 
-  // Re-scale saat ukuran jendela berubah.
+  // Re-scale saat ukuran jendela / kontainer berubah (mis. modal selesai animasi).
   useEffect(() => {
     if (status !== 'ok') return;
     const onResize = () => fit();
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && hostRef.current) {
+      // hanya refit bila LEBAR berubah (set height kita sendiri jangan memicu loop)
+      let lastW = hostRef.current.clientWidth;
+      ro = new ResizeObserver(() => {
+        const w = hostRef.current?.clientWidth ?? 0;
+        if (w !== lastW) {
+          lastW = w;
+          fit();
+        }
+      });
+      ro.observe(hostRef.current);
+    }
+    return () => {
+      window.removeEventListener('resize', onResize);
+      ro?.disconnect();
+    };
   }, [status, fit]);
 
   return (
