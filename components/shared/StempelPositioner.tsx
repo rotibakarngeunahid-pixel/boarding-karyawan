@@ -176,6 +176,12 @@ export function StempelPositioner({
           <button onClick={() => changeSize(-10)} className="rounded-lg border px-2 py-1 text-sm">−</button>
           <span className="text-xs text-gray-500">ukuran</span>
           <button onClick={() => changeSize(10)} className="rounded-lg border px-2 py-1 text-sm">+</button>
+          <button
+            onClick={() => setStamp((p) => ({ ...p, left: markerRef.current.x, top: markerRef.current.y }))}
+            className="rounded-lg border px-2 py-1 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            Reset
+          </button>
           <Button size="sm" onClick={handleSave} loading={saving}>
             <Save className="h-4 w-4" /> Simpan
           </Button>
