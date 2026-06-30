@@ -5,17 +5,23 @@ import { Stamp, Upload, Loader2, Move } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ApiError, getStempel, uploadStempel, type StempelInfo } from '@/lib/api';
-import { useCabangOptions } from '@/lib/useCabang';
+import {
+  ApiError,
+  getKontrakTemplates,
+  getStempel,
+  uploadStempel,
+  type StempelInfo,
+} from '@/lib/api';
 import { StempelPositioner } from '@/components/shared/StempelPositioner';
 
 // Upload + atur posisi (seret) stempel/cap perusahaan -> placeholder {{STEMPEL}}.
 export function StempelCard() {
-  const cabangOptions = useCabangOptions();
   const [info, setInfo] = useState<StempelInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  // Cabang yang punya template (agar editor menampilkan dokumen yang ada).
+  const [previewCabang, setPreviewCabang] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -23,6 +29,11 @@ export function StempelCard() {
       .then(setInfo)
       .catch(() => {})
       .finally(() => setLoading(false));
+    getKontrakTemplates()
+      .then((rows) => {
+        if (rows.length) setPreviewCabang(rows[0].cabang ?? '');
+      })
+      .catch(() => {});
   }, []);
 
   async function handleFile(file: File | null) {
@@ -116,7 +127,7 @@ export function StempelCard() {
         <StempelPositioner
           open={editorOpen}
           onClose={() => setEditorOpen(false)}
-          cabang={cabangOptions[0] ?? ''}
+          cabang={previewCabang}
           stampUrl={info.url}
           settings={info.settings}
           onSaved={(s) => setInfo((prev) => (prev ? { ...prev, settings: s } : prev))}
