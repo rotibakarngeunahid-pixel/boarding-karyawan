@@ -94,6 +94,31 @@ function kontrak_placeholder_map(array $k): array {
   ];
 }
 
+/** Markup gambar MENGAMBANG (wp:anchor, wrapNone) -> bisa menimpa teks. */
+function docx_build_anchor_drawing(string $rid, int $cx, int $cy, int $id, string $name, int $offX, int $offY): string {
+  return '<w:drawing><wp:anchor simplePos="0" behindDoc="0" distT="0" distB="0" distL="0" distR="0" '
+    . 'allowOverlap="1" layoutInCell="1" locked="0" relativeHeight="251658240" '
+    . 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
+    . '<wp:simplePos x="0" y="0"/>'
+    . '<wp:positionH relativeFrom="column"><wp:posOffset>' . $offX . '</wp:posOffset></wp:positionH>'
+    . '<wp:positionV relativeFrom="paragraph"><wp:posOffset>' . $offY . '</wp:posOffset></wp:positionV>'
+    . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/>'
+    . '<wp:effectExtent l="0" t="0" r="0" b="0"/>'
+    . '<wp:wrapNone/>'
+    . '<wp:docPr id="' . $id . '" name="' . $name . '"/>'
+    . '<wp:cNvGraphicFramePr/>'
+    . '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+    . '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+    . '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+    . '<pic:nvPicPr><pic:cNvPr id="' . $id . '" name="' . $name . '"/><pic:cNvPicPr/></pic:nvPicPr>'
+    . '<pic:blipFill><a:blip r:embed="' . $rid . '" '
+    . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
+    . '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+    . '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm>'
+    . '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+    . '</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>';
+}
+
 /** Markup gambar inline (wp:inline) untuk menggantikan placeholder. */
 function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string $name): string {
   return '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" '
@@ -165,7 +190,12 @@ function fill_docx_template(
     $cy = $h * 9525;
     $zip->addFromString('word/media/' . $media, $img['bin']);
     $relNodes[] = '<Relationship Id="' . $rid . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $media . '"/>';
-    $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)));
+    // MENGAMBANG agar menimpa teks (cap/ttd terlihat nyata).
+    // Pusatkan secara horizontal pada titik placeholder; turunkan ~1 baris agar
+    // menumpuk nama di bawahnya.
+    $offX = -(int) round($cx / 2);
+    $offY = (int) round(180000 - $cy / 2);
+    $drawings[$ph] = docx_build_anchor_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
   }
 
   // Tulis relationships SEKALI (hindari masalah getFromName setelah addFromString).
@@ -212,10 +242,26 @@ function fill_docx_template(
       }, $xml);
 
       // Sisipkan gambar di placeholder masing-masing (hanya di body dokumen).
-      // Toleran: placeholder boleh ada teks lain di w:t yang sama (akan diganti gambar).
+      // Pecah run agar teks di sekitar placeholder (mis. nama di baris sama) tetap utuh.
       if ($drawings && $name === 'word/document.xml') {
         foreach ($drawings as $ph => $draw) {
-          $xml = preg_replace('/<w:t[^>]*>[^<]*\{\{\s*' . $ph . '\s*\}\}[^<]*<\/w:t>/u', $draw, $xml, 1);
+          $xml = preg_replace_callback(
+            '#<w:r\b([^>]*)>(\s*<w:rPr>.*?</w:rPr>)?\s*<w:t([^>]*)>([^<]*)\{\{\s*' . $ph . '\s*\}\}([^<]*)</w:t>\s*</w:r>#us',
+            function ($m) use ($draw) {
+              $rAttr = $m[1];
+              $rPr = $m[2] ?? '';
+              $tAttr = $m[3];
+              $pre = $m[4];
+              $post = $m[5];
+              $out = '';
+              if ($pre !== '') $out .= '<w:r' . $rAttr . '>' . $rPr . '<w:t' . $tAttr . '>' . $pre . '</w:t></w:r>';
+              $out .= '<w:r' . $rAttr . '>' . $rPr . $draw . '</w:r>';
+              if ($post !== '') $out .= '<w:r' . $rAttr . '>' . $rPr . '<w:t' . $tAttr . '>' . $post . '</w:t></w:r>';
+              return $out;
+            },
+            $xml,
+            1
+          );
         }
       }
 
