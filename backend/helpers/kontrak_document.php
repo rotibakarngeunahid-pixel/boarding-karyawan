@@ -153,7 +153,8 @@ function fill_docx_template(
   string $path,
   array $map,
   ?string $signaturePng = null,
-  ?string $stempelPng = null
+  ?string $stempelPng = null,
+  ?array $stempelOverride = null
 ): string {
   if (!is_file($path)) throw new RuntimeException('File template tidak ditemukan di server.');
 
@@ -175,9 +176,9 @@ function fill_docx_template(
     $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 190, 'offx' => 0, 'offy' => 0];
   }
   if ($stempelPng !== null && $stempelPng !== '') {
-    $ss = function_exists('get_stempel_settings')
+    $ss = $stempelOverride ?? (function_exists('get_stempel_settings')
       ? get_stempel_settings()
-      : ['width' => 120, 'offx' => 0, 'offy' => 0];
+      : ['width' => 120, 'offx' => 0, 'offy' => 0]);
     $imgs['STEMPEL'] = ['bin' => $stempelPng, 'w' => (int) $ss['width'], 'offx' => (int) $ss['offx'], 'offy' => (int) $ss['offy']];
   }
 

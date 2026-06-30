@@ -12,8 +12,6 @@ import {
   type StempelSettings,
 } from '@/lib/api';
 
-const MARKER = 'RBNSTEMPELMARKER';
-
 // Editor "move tool": seret stempel langsung di atas preview kontrak.
 export function StempelPositioner({
   open,
@@ -79,24 +77,27 @@ export function StempelPositioner({
         scaleRef.current = s;
       }
 
-      // Cari penanda placeholder, catat posisinya, lalu sembunyikan teksnya.
-      const all = Array.from(host.querySelectorAll<HTMLElement>('*'));
-      const el = all.find((e) => e.children.length === 0 && (e.textContent ?? '').includes(MARKER));
+      // Acuan = stempel ASLI di posisi natural (offset 0). Pakai gambar terakhir
+      // di dokumen (stempel biasanya satu-satunya gambar, di area tanda tangan).
+      const s = scaleRef.current;
       const content = contentRef.current;
-      if (el && content) {
-        const r = el.getBoundingClientRect();
+      const imgs = host.querySelectorAll<HTMLImageElement>('img');
+      const stampImg = imgs.length ? imgs[imgs.length - 1] : null;
+      let baseW = settings.width * s;
+      if (stampImg && content) {
+        const r = stampImg.getBoundingClientRect();
         const cr = content.getBoundingClientRect();
         markerRef.current = { x: r.left - cr.left, y: r.top - cr.top };
-        el.style.color = 'transparent';
+        if (r.width) baseW = r.width;
+        stampImg.style.opacity = '0'; // sembunyikan; yang diseret adalah overlay
       } else {
         markerRef.current = { x: 40, y: 80 };
       }
 
-      const s = scaleRef.current;
       setStamp({
         left: markerRef.current.x + settings.offx * s,
         top: markerRef.current.y + settings.offy * s,
-        w: settings.width * s,
+        w: baseW,
       });
       setStatus('ok');
 

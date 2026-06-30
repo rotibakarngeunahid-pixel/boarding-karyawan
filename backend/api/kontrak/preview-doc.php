@@ -51,13 +51,16 @@ try {
 
   $path = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $tpl['filename'];
 
-  // Mode atur-posisi: ganti {{STEMPEL}} dgn penanda teks (tanpa gambar) agar
-  // editor frontend bisa menemukan titik placeholder lalu menaruh stempel seret.
+  // Mode atur-posisi (pos=1): render stempel di posisi NATURAL (offset 0) sebagai
+  // acuan editor seret, sehingga "yang dilihat = yang dirender".
   $pos = isset($_GET['pos']) && $_GET['pos'] === '1';
   $map = kontrak_placeholder_map($k);
   if ($pos) {
-    $map['STEMPEL'] = 'RBNSTEMPELMARKER';
-    $content = fill_docx_template($path, $map, null, null);
+    $ss = get_stempel_settings();
+    $content = fill_docx_template(
+      $path, $map, null, get_stempel_binary(),
+      ['width' => (int) $ss['width'], 'offx' => 0, 'offy' => 0]
+    );
   } else {
     $content = fill_docx_template($path, $map, null, get_stempel_binary());
   }
