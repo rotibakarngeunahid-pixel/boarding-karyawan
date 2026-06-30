@@ -21,6 +21,13 @@ try {
   $k = get_kontrak_document_by_token($db, $token);
   if (!$k) json_error('Link tanda tangan tidak ditemukan.', 404);
 
+  // inline (tampil di layar) atau attachment (unduh).
+  $download = isset($_GET['download']) && $_GET['download'] === '1';
+  $disp = $download ? 'attachment' : 'inline';
+  $fname = $download
+    ? 'Kontrak_' . preg_replace('/[^A-Za-z0-9]+/', '_', (string) $k['nomor_kontrak']) . '.docx'
+    : 'kontrak.docx';
+
   // 1. Snapshot dokumen yang sudah ditandatangani (paling sahih).
   if (!empty($k['snapshot_docx_path'])) {
     $snap = rtrim(UPLOAD_BASE, '/\\') . '/' . $k['snapshot_docx_path'];
@@ -28,7 +35,7 @@ try {
       $bin = file_get_contents($snap);
       if ($bin !== false) {
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header('Content-Disposition: inline; filename="kontrak.docx"');
+        header('Content-Disposition: ' . $disp . '; filename="' . $fname . '"');
         header('Content-Length: ' . strlen($bin));
         echo $bin;
         exit;
@@ -47,7 +54,7 @@ try {
   $content = fill_docx_template($path, kontrak_placeholder_map($k));
 
   header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-  header('Content-Disposition: inline; filename="kontrak.docx"');
+  header('Content-Disposition: ' . $disp . '; filename="' . $fname . '"');
   header('Content-Length: ' . strlen($content));
   echo $content;
   exit;

@@ -132,8 +132,8 @@ export default function OnboardingFormPage() {
         {/* Header */}
         <div className="mb-6 rounded-2xl bg-rbn-primary p-6 text-white">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white p-1">
-              <Logo className="h-full w-full" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+              <Logo className="h-10 w-10" />
             </div>
             <div>
               <h1 className="text-lg font-bold">Formulir Onboarding</h1>

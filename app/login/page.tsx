@@ -28,7 +28,8 @@ function LoginForm() {
       const res = await login(username, password);
       await saveSession(res.token, res.user);
       toast.success('Login berhasil!');
-      router.push(redirect);
+      // replace agar halaman login tidak tertinggal di riwayat (tombol back lebih rapi).
+      router.replace(redirect);
       router.refresh();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal login.');
@@ -41,7 +42,9 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <Logo className="mx-auto mb-4 h-20 w-20" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+            <Logo className="h-16 w-16" />
+          </div>
           <h1 className="text-2xl font-bold text-rbn-dark">Boarding System</h1>
           <p className="mt-1 text-sm text-gray-500">Roti Bakar Ngeunah</p>
         </div>

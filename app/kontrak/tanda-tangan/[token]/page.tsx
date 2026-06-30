@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2, FileSignature } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileSignature, FileDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/input';
@@ -65,6 +65,13 @@ export default function TandaTanganKontrakPage() {
         signature,
         setuju,
       });
+      // Segarkan data agar tampil waktu TTD, gambar tanda tangan, & dokumen final.
+      try {
+        const fresh = await getKontrakSignInfo(token);
+        setInfo(fresh);
+      } catch {
+        /* abaikan: tetap tampil halaman sukses */
+      }
       setDone(true);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan tanda tangan.');
@@ -108,10 +115,10 @@ export default function TandaTanganKontrakPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-2xl px-4">
         {/* Header */}
-        <div className="mb-6 rounded-2xl bg-rbn-primary p-6 text-white">
+        <div className="mb-6 rounded-2xl bg-rbn-primary p-6 text-white shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white p-1">
-              <Logo className="h-full w-full" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+              <Logo className="h-10 w-10" />
             </div>
             <div>
               <h1 className="text-lg font-bold">Kontrak Kerja (PKWT)</h1>
@@ -138,20 +145,51 @@ export default function TandaTanganKontrakPage() {
 
         {/* Sudah ditandatangani */}
         {alreadySigned ? (
-          <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-            <CheckCircle2 className="mx-auto h-14 w-14 text-green-500" />
-            <h2 className="mt-4 text-xl font-bold text-gray-900">Kontrak Telah Ditandatangani</h2>
-            <p className="mt-2 text-sm text-gray-500">
-              Terima kasih{nama ? `, ${nama}` : ''}. Tanda tangan Anda sudah kami terima
-              {info.ditandatangani_at ? ` pada ${formatTanggalJam(info.ditandatangani_at)}` : ''}.
-            </p>
-            {info.tanda_tangan_url && !done && (
-              <div className="mt-5 inline-block rounded-xl border border-gray-200 p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={info.tanda_tangan_url} alt="Tanda tangan" className="h-28 object-contain" />
+          <div className="space-y-5">
+            <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
+              <CheckCircle2 className="mx-auto h-14 w-14 text-green-500" />
+              <h2 className="mt-3 text-xl font-bold text-gray-900">Kontrak Telah Ditandatangani</h2>
+              <p className="mt-2 text-sm text-gray-500">
+                Terima kasih{nama ? `, ${nama}` : ''}. Tanda tangan Anda sudah tersimpan
+                {info.ditandatangani_at ? ` pada ${formatTanggalJam(info.ditandatangani_at)}` : ''}.
+              </p>
+
+              {info.tanda_tangan_url && (
+                <div className="mt-5 inline-flex flex-col items-center rounded-xl border border-gray-200 bg-gray-50 p-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={info.tanda_tangan_url} alt="Tanda tangan" className="h-24 object-contain" />
+                  <span className="mt-1 text-xs text-gray-400">Tanda tangan Anda</span>
+                </div>
+              )}
+
+              <div className="mt-6">
+                <a
+                  href={kontrakSignDocUrl(token, true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-rbn-primary px-5 py-3 text-sm font-semibold text-white hover:bg-rbn-primary-dark"
+                >
+                  <FileDown className="h-5 w-5" /> Download Kontrak (Word)
+                </a>
+                <p className="mt-2 text-xs text-gray-400">
+                  Tanda tangan Anda sudah menyatu di dalam dokumen kontrak.
+                </p>
               </div>
-            )}
-            <p className="mt-6 text-xs text-gray-400">Halaman ini bisa Anda tutup.</p>
+            </div>
+
+            {/* Dokumen final lengkap dengan tanda tangan */}
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-400">Dokumen Kontrak Anda</p>
+              <div className="max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <DocxViewer
+                  url={kontrakSignDocUrl(token)}
+                  title="Kontrak Kerja"
+                  fallback={
+                    <div className="whitespace-pre-wrap p-2 text-sm leading-7 text-gray-900">
+                      {info.text}
+                    </div>
+                  }
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl bg-white p-6 shadow-sm">

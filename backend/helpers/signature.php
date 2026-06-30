@@ -60,5 +60,7 @@ function save_signature_data_url(string $dataUrl, string $subdir = 'ttd'): array
     'filename' => $filename,
     'path'     => $relative,
     'url'      => rtrim(UPLOAD_URL_BASE, '/') . '/' . $relative,
+    'ext'      => $ext,
+    'binary'   => $binary,
   ];
 }

@@ -46,7 +46,9 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       >
         <div className="flex h-16 items-center justify-between border-b border-gray-100 px-5">
           <div className="flex items-center gap-2">
-            <Logo className="h-9 w-9 rounded-lg" />
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-gray-100">
+              <Logo className="h-8 w-8" />
+            </div>
             <div className="leading-tight">
               <p className="text-sm font-semibold text-gray-900">Boarding System</p>
               <p className="text-[10px] text-gray-400">Roti Bakar Ngeunah</p>

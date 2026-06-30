@@ -12,6 +12,24 @@ function form_allowed_types(): array {
   return ['text', 'textarea', 'number', 'tel', 'date', 'select', 'radio', 'file'];
 }
 
+/**
+ * Rapikan kapitalisasi nama: "dWi ADithya" -> "Dwi Adithya".
+ * Setiap kata diawali huruf besar, sisanya kecil (mendukung UTF-8).
+ */
+function rbn_title_case(string $s): string {
+  $s = trim(preg_replace('/\s+/', ' ', $s));
+  if ($s === '') return $s;
+  if (function_exists('mb_convert_case')) {
+    return mb_convert_case($s, MB_CASE_TITLE, 'UTF-8');
+  }
+  return ucwords(strtolower($s));
+}
+
+// Field yang otomatis dirapikan kapitalisasinya saat disimpan.
+function rbn_title_case_fields(): array {
+  return ['nama_lengkap', 'nama_panggilan'];
+}
+
 /** Normalisasi satu baris form_fields: decode opsi & cast angka/boolean. */
 function parse_field(array $r): array {
   $r['id']         = (int) $r['id'];
@@ -116,6 +134,10 @@ function collect_karyawan_columns(PDO $db, array $post, array $files, bool $file
     }
 
     $val = isset($post[$key]) ? trim((string) $post[$key]) : '';
+    // Rapikan kapitalisasi untuk field nama.
+    if ($val !== '' && in_array($f['field_key'], rbn_title_case_fields(), true)) {
+      $val = rbn_title_case($val);
+    }
     if ($required && $val === '') { $missing[] = $f['label']; continue; }
 
     if ($val !== '' && in_array($f['tipe'], ['select', 'radio'], true)

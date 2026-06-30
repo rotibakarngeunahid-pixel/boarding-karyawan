@@ -377,8 +377,10 @@ export function previewKontrakTemplate(cabang?: string | null): Promise<KontrakP
 
 // ── URL dokumen .docx (untuk ditampilkan apa adanya via DocxViewer) ──
 /** URL dokumen kontrak (.docx) untuk halaman tanda tangan publik. */
-export function kontrakSignDocUrl(token: string): string {
-  return `${API_URL}/api/kontrak/sign-doc.php?token=${encodeURIComponent(token)}`;
+export function kontrakSignDocUrl(token: string, download = false): string {
+  return `${API_URL}/api/kontrak/sign-doc.php?token=${encodeURIComponent(token)}${
+    download ? '&download=1' : ''
+  }`;
 }
 
 /** URL dokumen kontrak (.docx) untuk panel admin: kontrak asli atau preview template cabang. */
