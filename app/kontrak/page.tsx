@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, THead, TBody, TR, TH, TD, EmptyRow } from '@/components/ui/table';
 import { LoadingState, ErrorState } from '@/components/ui/spinner';
 import { TemplateKontrakCard } from '@/components/shared/TemplateKontrakCard';
+import { StempelCard } from '@/components/shared/StempelCard';
 import { listKontrak } from '@/lib/api';
 import { type Kontrak } from '@/types';
 import { useCabangOptions } from '@/lib/useCabang';
@@ -81,9 +82,10 @@ export default function KontrakPage() {
         </div>
       }
     >
-      {/* REVISI 3 — kelola template surat kontrak */}
-      <div className="mb-4">
+      {/* REVISI 3 — kelola template surat kontrak + stempel perusahaan */}
+      <div className="mb-4 space-y-3">
         <TemplateKontrakCard />
+        <StempelCard />
       </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

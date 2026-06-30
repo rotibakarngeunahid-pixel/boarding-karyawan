@@ -1,6 +1,8 @@
 <?php
 // Helper pembuatan dokumen/preview kontrak kerja.
 
+require_once __DIR__ . '/aset.php'; // get_stempel_binary()
+
 function kontrak_fmt_tanggal_id(?string $value): string {
   if (!$value) return '-';
   $bulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -86,67 +88,22 @@ function kontrak_placeholder_map(array $k): array {
     'GAJI_POKOK'       => $gaji,
     'DURASI_BULAN'     => $durasiBulan,
     'TANGGAL_HARI_INI' => kontrak_fmt_tanggal_id(date('Y-m-d')),
-    // Placeholder gambar tanda tangan. Default kosong (diisi gambar saat sudah TTD).
-    'TANDA_TANGAN'     => '',
+    // Placeholder gambar. Default kosong; diisi gambar saat dirender.
+    'TANDA_TANGAN'     => '', // tanda tangan karyawan (saat sudah TTD)
+    'STEMPEL'          => '', // stempel/cap perusahaan (PIHAK PERTAMA)
   ];
 }
 
-/**
- * Siapkan gambar tanda tangan di dalam arsip .docx (tambah media, relationship,
- * content-type) lalu kembalikan markup <w:drawing> inline yang siap dipakai
- * untuk menggantikan placeholder {{TANDA_TANGAN}}.
- *
- * @return string markup drawing, atau '' bila gagal.
- */
-function docx_prepare_signature(ZipArchive $zip, string $png): string {
-  // Ukuran gambar -> jaga rasio. Lebar target ~190px.
-  $w = 190; $h = 80;
-  if (function_exists('getimagesizefromstring')) {
-    $info = @getimagesizefromstring($png);
-    if ($info && $info[0] > 0 && $info[1] > 0) {
-      $h = (int) round(190 * ($info[1] / $info[0]));
-      if ($h < 30) $h = 30;
-      if ($h > 240) $h = 240;
-      $w = 190;
-    }
-  }
-  $emu = 9525; // EMU per pixel @96dpi
-  $cx = $w * $emu;
-  $cy = $h * $emu;
-  $rid = 'rIdRbnTtd1';
-
-  // 1. Simpan media.
-  $zip->addFromString('word/media/rbn_ttd.png', $png);
-
-  // 2. Content types: pastikan ada Default png.
-  $ct = $zip->getFromName('[Content_Types].xml');
-  if ($ct !== false && strpos($ct, 'Extension="png"') === false) {
-    $ct = preg_replace('/(<Types[^>]*>)/', '$1<Default Extension="png" ContentType="image/png"/>', $ct, 1);
-    $zip->addFromString('[Content_Types].xml', $ct);
-  }
-
-  // 3. Relationship di word/_rels/document.xml.rels.
-  $relName = 'word/_rels/document.xml.rels';
-  $rels = $zip->getFromName($relName);
-  $relNode = '<Relationship Id="' . $rid . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/rbn_ttd.png"/>';
-  if ($rels === false || $rels === '') {
-    $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-      . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-      . $relNode . '</Relationships>';
-  } elseif (strpos($rels, $rid) === false) {
-    $rels = preg_replace('#</Relationships>#', $relNode . '</Relationships>', $rels, 1);
-  }
-  $zip->addFromString($relName, $rels);
-
-  // 4. Markup inline image.
+/** Markup gambar inline (wp:inline) untuk menggantikan placeholder. */
+function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string $name): string {
   return '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" '
     . 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
     . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/>'
-    . '<wp:docPr id="1001" name="TandaTangan"/>'
+    . '<wp:docPr id="' . $docprId . '" name="' . $name . '"/>'
     . '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
     . '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
     . '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
-    . '<pic:nvPicPr><pic:cNvPr id="1001" name="TandaTangan"/><pic:cNvPicPr/></pic:nvPicPr>'
+    . '<pic:nvPicPr><pic:cNvPr id="' . $docprId . '" name="' . $name . '"/><pic:cNvPicPr/></pic:nvPicPr>'
     . '<pic:blipFill><a:blip r:embed="' . $rid . '" '
     . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
     . '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
@@ -158,11 +115,17 @@ function docx_prepare_signature(ZipArchive $zip, string $png): string {
 /**
  * Isi placeholder {{...}} ke dalam file .docx (mempertahankan format asli:
  * tabel, bold, heading, dll.) lalu kembalikan biner .docx hasilnya.
- * Mencakup body + header + footer dokumen.
+ * Mencakup body + header + footer dokumen. Dapat menyisipkan gambar tanda
+ * tangan ({{TANDA_TANGAN}}) dan stempel ({{STEMPEL}}) secara inline.
  *
  * @throws RuntimeException bila gagal.
  */
-function fill_docx_template(string $path, array $map, ?string $signaturePng = null): string {
+function fill_docx_template(
+  string $path,
+  array $map,
+  ?string $signaturePng = null,
+  ?string $stempelPng = null
+): string {
   if (!is_file($path)) throw new RuntimeException('File template tidak ditemukan di server.');
 
   $tmp = tempnam(sys_get_temp_dir(), 'kontrak');
@@ -177,13 +140,62 @@ function fill_docx_template(string $path, array $map, ?string $signaturePng = nu
     throw new RuntimeException('Gagal membuka template .docx.');
   }
 
-  // Siapkan gambar tanda tangan (bila ada) -> markup yang akan menggantikan {{TANDA_TANGAN}}.
-  $drawing = '';
-  if ($signaturePng !== null && $signaturePng !== '') {
-    try {
-      $drawing = docx_prepare_signature($zip, $signaturePng);
-    } catch (Throwable $e) {
-      $drawing = '';
+  // Gambar yang akan disisipkan: placeholder => [binary, lebar target px].
+  $imgs = [];
+  if ($signaturePng !== null && $signaturePng !== '') $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 190];
+  if ($stempelPng   !== null && $stempelPng   !== '') $imgs['STEMPEL']      = ['bin' => $stempelPng,   'w' => 120];
+
+  $drawings = [];  // placeholder => markup
+  $relNodes = [];
+  $ctExts   = [];  // ext => contentType
+  $idc = 0;
+  foreach ($imgs as $ph => $img) {
+    $info = function_exists('getimagesizefromstring') ? @getimagesizefromstring($img['bin']) : false;
+    if (!$info || $info[0] <= 0 || $info[1] <= 0) continue;
+    $ext = (($info[2] ?? 0) === IMAGETYPE_JPEG) ? 'jpg' : 'png';
+    $ctExts[$ext] = ($ext === 'jpg') ? 'image/jpeg' : 'image/png';
+    $idc++;
+    $rid = 'rIdRbnImg' . $idc;
+    $media = 'rbn_' . strtolower($ph) . '_' . $idc . '.' . $ext;
+    $w = (int) $img['w'];
+    $h = (int) round($w * ($info[1] / $info[0]));
+    if ($h < 24) $h = 24;
+    if ($h > 260) $h = 260;
+    $cx = $w * 9525;
+    $cy = $h * 9525;
+    $zip->addFromString('word/media/' . $media, $img['bin']);
+    $relNodes[] = '<Relationship Id="' . $rid . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $media . '"/>';
+    $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)));
+  }
+
+  // Tulis relationships SEKALI (hindari masalah getFromName setelah addFromString).
+  if ($relNodes) {
+    $relName = 'word/_rels/document.xml.rels';
+    $rels = $zip->getFromName($relName);
+    if ($rels === false || $rels === '') {
+      $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        . implode('', $relNodes) . '</Relationships>';
+    } else {
+      $rels = preg_replace('#</Relationships>#', implode('', $relNodes) . '</Relationships>', $rels, 1);
+    }
+    $zip->addFromString($relName, $rels);
+  }
+
+  // Tulis content-types SEKALI (pastikan Default untuk png/jpg ada).
+  if ($ctExts) {
+    $ct = $zip->getFromName('[Content_Types].xml');
+    if ($ct !== false && $ct !== '') {
+      $inject = '';
+      foreach ($ctExts as $ext => $type) {
+        if (strpos($ct, 'Extension="' . $ext . '"') === false) {
+          $inject .= '<Default Extension="' . $ext . '" ContentType="' . $type . '"/>';
+        }
+      }
+      if ($inject !== '') {
+        $ct = preg_replace('/(<Types[^>]*>)/', '$1' . $inject, $ct, 1);
+        $zip->addFromString('[Content_Types].xml', $ct);
+      }
     }
   }
 
@@ -193,17 +205,14 @@ function fill_docx_template(string $path, array $map, ?string $signaturePng = nu
       $xml = $zip->getFromName($name);
       if ($xml === false || $xml === '') continue;
 
-      // Sisipkan gambar tanda tangan di placeholder {{TANDA_TANGAN}} (hanya di body).
-      if ($drawing !== '' && $name === 'word/document.xml') {
-        $xml = preg_replace(
-          '/<w:t[^>]*>\s*\{\{\s*TANDA_TANGAN\s*\}\}\s*<\/w:t>/u',
-          $drawing,
-          $xml,
-          1
-        );
+      // Sisipkan gambar di placeholder masing-masing (hanya di body dokumen).
+      if ($drawings && $name === 'word/document.xml') {
+        foreach ($drawings as $ph => $draw) {
+          $xml = preg_replace('/<w:t[^>]*>\s*\{\{\s*' . $ph . '\s*\}\}\s*<\/w:t>/u', $draw, $xml, 1);
+        }
       }
 
-      // Sisa placeholder teks (termasuk TANDA_TANGAN yang tak terpakai -> dikosongkan).
+      // Sisa placeholder teks (gambar yang tak terpakai -> dikosongkan via map).
       $zip->addFromString($name, replace_kontrak_placeholders($xml, $map, true));
     }
   }

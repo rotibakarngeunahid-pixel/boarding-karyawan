@@ -97,9 +97,9 @@ try {
       $tpl = get_active_kontrak_template($db, $k['cabang'] ?? null);
       if ($tpl && strtolower(pathinfo($tpl['filename'], PATHINFO_EXTENSION)) === 'docx') {
         $tplFile = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $tpl['filename'];
-        // Sisipkan gambar tanda tangan (PNG) ke dalam dokumen bila placeholder {{TANDA_TANGAN}} ada.
+        // Sisipkan gambar tanda tangan (PNG) + stempel perusahaan ke dalam dokumen.
         $signPng = (($saved['ext'] ?? '') === 'png') ? ($saved['binary'] ?? null) : null;
-        $bin = fill_docx_template($tplFile, kontrak_placeholder_map($k), $signPng);
+        $bin = fill_docx_template($tplFile, kontrak_placeholder_map($k), $signPng, get_stempel_binary());
         $dir = rtrim(UPLOAD_BASE, '/\\') . '/kontrak_docs/';
         if (!is_dir($dir)) @mkdir($dir, 0755, true);
         if (is_dir($dir) && is_writable($dir)) {

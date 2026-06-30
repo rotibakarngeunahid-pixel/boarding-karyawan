@@ -36,8 +36,8 @@ try {
   $out_name = 'Kontrak_' . preg_replace('/[^A-Za-z0-9]+/', '_', $k['nomor_kontrak']) . '.' . $ext;
 
   if ($ext === 'docx') {
-    // Isi placeholder ke .docx sambil mempertahankan format (tabel, bold, dll.).
-    $content = fill_docx_template($path, $map);
+    // Isi placeholder ke .docx sambil mempertahankan format (tabel, bold, dll.) + stempel.
+    $content = fill_docx_template($path, $map, null, get_stempel_binary());
     header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     header('Content-Disposition: attachment; filename="' . $out_name . '"');
     header('Content-Length: ' . strlen($content));

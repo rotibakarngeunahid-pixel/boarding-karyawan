@@ -414,6 +414,27 @@ export function uploadKontrakTemplate(
   );
 }
 
+// ── STEMPEL / CAP PERUSAHAAN (untuk placeholder {{STEMPEL}}) ──
+export interface StempelInfo {
+  filename: string;
+  url: string;
+  uploaded_at: string;
+}
+
+export function getStempel(): Promise<StempelInfo | null> {
+  return request<StempelInfo | null>('/api/aset/stempel.php');
+}
+
+export function uploadStempel(file: File): Promise<{ filename: string; url: string }> {
+  const fd = new FormData();
+  fd.append('stempel', file);
+  return request<{ filename: string; url: string }>('/api/aset/stempel.php', {
+    method: 'POST',
+    body: fd,
+    isFormData: true,
+  });
+}
+
 /** Unduh surat kontrak (.docx/.doc) hasil isi template. Memicu download di browser. */
 export async function downloadKontrakDoc(kontrakId: number, nomorKontrak: string): Promise<void> {
   const token = getToken();
