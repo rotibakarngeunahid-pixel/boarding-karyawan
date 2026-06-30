@@ -119,8 +119,12 @@ function docx_build_anchor_drawing(string $rid, int $cx, int $cy, int $id, strin
     . '</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>';
 }
 
-/** Markup gambar inline (wp:inline) untuk menggantikan placeholder. */
-function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string $name): string {
+/**
+ * Markup gambar INLINE (wp:inline) untuk menggantikan placeholder.
+ * $offY (EMU) menggeser gambar ke bawah secara visual (position:relative) agar
+ * bisa menumpuk teks di bawahnya — tanpa merusak posisi tengah/baris.
+ */
+function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string $name, int $offY = 0): string {
   return '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" '
     . 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
     . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/>'
@@ -132,7 +136,7 @@ function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string 
     . '<pic:blipFill><a:blip r:embed="' . $rid . '" '
     . 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>'
     . '<a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
-    . '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm>'
+    . '<pic:spPr><a:xfrm><a:off x="0" y="' . $offY . '"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm>'
     . '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
     . '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>';
 }
@@ -190,12 +194,9 @@ function fill_docx_template(
     $cy = $h * 9525;
     $zip->addFromString('word/media/' . $media, $img['bin']);
     $relNodes[] = '<Relationship Id="' . $rid . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $media . '"/>';
-    // MENGAMBANG agar menimpa teks (cap/ttd terlihat nyata).
-    // Pusatkan secara horizontal pada titik placeholder; turunkan ~1 baris agar
-    // menumpuk nama di bawahnya.
-    $offX = -(int) round($cx / 2);
-    $offY = (int) round(180000 - $cy / 2);
-    $drawings[$ph] = docx_build_anchor_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
+    // Inline (andal & di tengah), didorong ke bawah agar menumpuk nama di bawahnya.
+    $offY = (int) round($cy * 0.55);
+    $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offY);
   }
 
   // Tulis relationships SEKALI (hindari masalah getFromName setelah addFromString).
