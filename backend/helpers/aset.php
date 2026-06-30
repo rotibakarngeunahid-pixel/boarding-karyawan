@@ -53,7 +53,11 @@ function stempel_preview_cabang(PDO $db): ?string {
     $xn = preg_replace_callback('/\{\{.*?\}\}/s', function ($m) {
       return preg_replace('/<[^>]+>/', '', $m[0]);
     }, $x);
-    if (strpos($xn, 'STEMPEL') !== false) return $r['cabang']; // null = Umum
+    // Template cocok bila ada {{STEMPEL}} ATAU teks acuan auto-anchor (nama pemilik).
+    $anchor = defined('STEMPEL_ANCHOR_TEXT') ? STEMPEL_ANCHOR_TEXT : 'Adithya';
+    if (strpos($xn, 'STEMPEL') !== false || strpos($xn, $anchor) !== false) {
+      return $r['cabang']; // null = Umum
+    }
   }
   return null;
 }

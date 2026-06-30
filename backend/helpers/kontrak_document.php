@@ -94,6 +94,28 @@ function kontrak_placeholder_map(array $k): array {
   ];
 }
 
+// Teks acuan untuk menaruh stempel OTOMATIS bila template tidak memuat {{STEMPEL}}.
+// = nama PIHAK PERTAMA (pemilik) pada blok tanda tangan.
+if (!defined('STEMPEL_ANCHOR_TEXT')) define('STEMPEL_ANCHOR_TEXT', 'Adithya');
+
+/**
+ * Sisipkan stempel otomatis sebelum kemunculan TERAKHIR teks acuan
+ * (nama pemilik di blok tanda tangan), tanpa perlu placeholder {{STEMPEL}}.
+ */
+function stempel_auto_anchor(string $xml, string $draw): string {
+  $anchor = STEMPEL_ANCHOR_TEXT;
+  // Kemunculan TERAKHIR teks acuan (= blok tanda tangan, bukan tabel data atas).
+  $p = strrpos($xml, $anchor);
+  if ($p === false) return $xml;
+  // Mundur ke awal <w:r ...> / <w:r> yang membungkus teks ini (tanpa regex berat).
+  $head = substr($xml, 0, $p);
+  $a = strrpos($head, '<w:r ');
+  $b = strrpos($head, '<w:r>');
+  $start = max($a === false ? -1 : $a, $b === false ? -1 : $b);
+  if ($start < 0) return $xml;
+  return substr($xml, 0, $start) . '<w:r>' . $draw . '</w:r>' . substr($xml, $start);
+}
+
 /** Markup gambar MENGAMBANG (wp:anchor, wrapNone) -> bisa menimpa teks. */
 function docx_build_anchor_drawing(string $rid, int $cx, int $cy, int $id, string $name, int $offX, int $offY): string {
   return '<w:drawing><wp:anchor simplePos="0" behindDoc="0" distT="0" distB="0" distL="0" distR="0" '
@@ -255,6 +277,7 @@ function fill_docx_template(
       // Pecah run agar teks di sekitar placeholder (mis. nama di baris sama) tetap utuh.
       if ($drawings && $name === 'word/document.xml') {
         foreach ($drawings as $ph => $draw) {
+          $cnt = 0;
           $xml = preg_replace_callback(
             '#<w:r\b([^>]*)>(\s*<w:rPr>.*?</w:rPr>)?\s*<w:t([^>]*)>([^<]*)\{\{\s*' . $ph . '\s*\}\}([^<]*)</w:t>\s*</w:r>#us',
             function ($m) use ($draw) {
@@ -270,8 +293,14 @@ function fill_docx_template(
               return $out;
             },
             $xml,
-            1
+            1,
+            $cnt
           );
+          // STEMPEL: bila placeholder {{STEMPEL}} tidak ada, taruh OTOMATIS di
+          // blok tanda tangan (sebelum nama pemilik) -> tak perlu tulis {{STEMPEL}}.
+          if ($ph === 'STEMPEL' && $cnt === 0) {
+            $xml = stempel_auto_anchor($xml, $draw);
+          }
         }
       }
 
