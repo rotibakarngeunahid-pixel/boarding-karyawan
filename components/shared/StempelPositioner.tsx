@@ -99,6 +99,13 @@ export function StempelPositioner({
         w: settings.width * s,
       });
       setStatus('ok');
+
+      // Auto-scroll ke area tanda tangan (halaman terakhir) agar stempel langsung terlihat.
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = Math.max(0, markerRef.current.y - 140);
+        }
+      });
     } catch {
       setStatus('error');
     }
@@ -188,8 +195,8 @@ export function StempelPositioner({
             Gagal memuat preview. Pastikan template untuk cabang ini sudah ada (.docx).
           </p>
         )}
-        <div ref={contentRef} className="relative mx-auto" style={{ width: 'fit-content' }}>
-          <div ref={hostRef} className="rbn-docx" style={{ display: status === 'ok' ? 'block' : 'none' }} />
+        <div ref={contentRef} className="relative w-full">
+          <div ref={hostRef} className="rbn-docx" />
           {status === 'ok' && (
             <div className="pointer-events-none absolute inset-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
