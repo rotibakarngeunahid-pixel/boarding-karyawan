@@ -205,10 +205,17 @@ function fill_docx_template(
       $xml = $zip->getFromName($name);
       if ($xml === false || $xml === '') continue;
 
+      // Normalisasi: satukan placeholder yang terpecah antar-run (Word sering
+      // memecah {{...}} ke beberapa bagian) agar mudah dicocokkan.
+      $xml = preg_replace_callback('/\{\{.*?\}\}/s', function ($m) {
+        return preg_replace('/<[^>]+>/', '', $m[0]); // buang tag di dalam {{...}}
+      }, $xml);
+
       // Sisipkan gambar di placeholder masing-masing (hanya di body dokumen).
+      // Toleran: placeholder boleh ada teks lain di w:t yang sama (akan diganti gambar).
       if ($drawings && $name === 'word/document.xml') {
         foreach ($drawings as $ph => $draw) {
-          $xml = preg_replace('/<w:t[^>]*>\s*\{\{\s*' . $ph . '\s*\}\}\s*<\/w:t>/u', $draw, $xml, 1);
+          $xml = preg_replace('/<w:t[^>]*>[^<]*\{\{\s*' . $ph . '\s*\}\}[^<]*<\/w:t>/u', $draw, $xml, 1);
         }
       }
 
