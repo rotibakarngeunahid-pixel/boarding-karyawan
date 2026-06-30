@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Maximize2, X } from 'lucide-react';
 import { LoadingState } from '@/components/ui/spinner';
 import { getToken } from '@/lib/api';
 
@@ -9,19 +10,24 @@ type Status = 'loading' | 'ok' | 'error';
 /**
  * Menampilkan dokumen kontrak (.docx) APA ADANYA (format asli: tabel, bold,
  * heading, dll.) memakai docx-preview. Otomatis di-scale agar muat lebar layar
- * (responsif untuk HP), dengan fallback ke teks bila gagal.
+ * (responsif untuk HP), ada tombol "Layar Penuh", dan fallback ke teks bila gagal.
  */
 export function DocxViewer({
   url,
   auth = false,
   fallback,
+  title = 'Kontrak Kerja',
+  allowFullscreen = true,
 }: {
   url: string;
   auth?: boolean; // kirim Authorization Bearer (untuk endpoint admin)
   fallback?: React.ReactNode; // ditampilkan bila render gagal (mis. teks polos)
+  title?: string;
+  allowFullscreen?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>('loading');
+  const [fullscreen, setFullscreen] = useState(false);
 
   // Skala dokumen agar PAS lebar kontainer (tidak terpotong).
   const fit = useCallback(() => {
@@ -30,9 +36,7 @@ export function DocxViewer({
     const wrapper = host.querySelector<HTMLElement>('.docx-wrapper');
     if (!wrapper) return;
     const page = host.querySelector<HTMLElement>('section.docx');
-    // ukur ukuran asli tanpa transform dulu
     wrapper.style.transform = 'none';
-    // lebar dokumen = lebar HALAMAN (bukan lebar kontainer)
     const docW = page?.offsetWidth || wrapper.scrollWidth || wrapper.offsetWidth;
     const natH = wrapper.offsetHeight;
     if (!docW) return;
@@ -46,14 +50,8 @@ export function DocxViewer({
   // Jalankan fit beberapa kali (font/gambar bisa selesai memuat belakangan).
   const scheduleFit = useCallback(() => {
     requestAnimationFrame(() => fit());
-    const t1 = setTimeout(fit, 120);
-    const t2 = setTimeout(fit, 350);
-    const t3 = setTimeout(fit, 800);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
+    const ts = [80, 200, 450, 800].map((d) => setTimeout(fit, d));
+    return () => ts.forEach(clearTimeout);
   }, [fit]);
 
   useEffect(() => {
@@ -101,14 +99,13 @@ export function DocxViewer({
     };
   }, [url, auth, scheduleFit]);
 
-  // Re-scale saat ukuran jendela / kontainer berubah (mis. modal selesai animasi).
+  // Re-scale saat ukuran jendela / kontainer berubah (mis. buka layar penuh).
   useEffect(() => {
     if (status !== 'ok') return;
     const onResize = () => fit();
     window.addEventListener('resize', onResize);
     let ro: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && hostRef.current) {
-      // hanya refit bila LEBAR berubah (set height kita sendiri jangan memicu loop)
       let lastW = hostRef.current.clientWidth;
       ro = new ResizeObserver(() => {
         const w = hostRef.current?.clientWidth ?? 0;
@@ -125,21 +122,64 @@ export function DocxViewer({
     };
   }, [status, fit]);
 
+  // Saat masuk/keluar layar penuh: kunci scroll body & re-scale.
+  useEffect(() => {
+    if (fullscreen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const cancel = scheduleFit();
+      return () => {
+        document.body.style.overflow = prev;
+        cancel();
+      };
+    }
+    if (status === 'ok') {
+      const cancel = scheduleFit();
+      return cancel;
+    }
+  }, [fullscreen, status, scheduleFit]);
+
   return (
-    <div>
+    <>
       {status === 'loading' && <LoadingState text="Memuat dokumen…" />}
       {status === 'error' && (
         <div>
-          {fallback ?? (
-            <p className="text-sm text-gray-500">Dokumen tidak dapat ditampilkan.</p>
-          )}
+          {fallback ?? <p className="text-sm text-gray-500">Dokumen tidak dapat ditampilkan.</p>}
         </div>
       )}
-      <div
-        ref={hostRef}
-        className="rbn-docx"
-        style={{ display: status === 'ok' ? 'block' : 'none' }}
-      />
-    </div>
+
+      <div className={fullscreen ? 'fixed inset-0 z-[70] flex flex-col bg-white' : ''}>
+        {fullscreen && (
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+            <p className="text-sm font-semibold text-gray-900">{title}</p>
+            <button
+              onClick={() => setFullscreen(false)}
+              className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <X className="h-4 w-4" /> Tutup
+            </button>
+          </div>
+        )}
+
+        <div className={fullscreen ? 'flex-1 overflow-auto bg-gray-100 p-3' : ''}>
+          {allowFullscreen && status === 'ok' && !fullscreen && (
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setFullscreen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Maximize2 className="h-3.5 w-3.5" /> Lihat Layar Penuh
+              </button>
+            </div>
+          )}
+          <div
+            ref={hostRef}
+            className="rbn-docx"
+            style={{ display: status === 'ok' ? 'block' : 'none' }}
+          />
+        </div>
+      </div>
+    </>
   );
 }

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { AlertCircle, CheckCircle2, FileSignature } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
-import { Input, Label } from '@/components/ui/input';
+import { Label } from '@/components/ui/input';
 import { Logo } from '@/components/shared/Logo';
 import { LoadingState } from '@/components/ui/spinner';
 import { SignaturePad, type SignaturePadHandle } from '@/components/shared/SignaturePad';
@@ -23,10 +23,12 @@ export default function TandaTanganKontrakPage() {
   const [loadError, setLoadError] = useState(false);
 
   const [setuju, setSetuju] = useState(false);
-  const [nama, setNama] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const padRef = useRef<SignaturePadHandle>(null);
+
+  // Nama sudah diisi di formulir onboarding -> pakai otomatis, tidak perlu ketik ulang.
+  const nama = info?.nama_lengkap ?? '';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -34,7 +36,6 @@ export default function TandaTanganKontrakPage() {
     try {
       const data = await getKontrakSignInfo(token);
       setInfo(data);
-      if (data?.nama_lengkap) setNama(data.nama_lengkap);
     } catch {
       setLoadError(true);
     } finally {
@@ -52,10 +53,6 @@ export default function TandaTanganKontrakPage() {
       toast.error('Centang persetujuan terlebih dahulu.');
       return;
     }
-    if (nama.trim() === '') {
-      toast.error('Nama lengkap wajib diisi.');
-      return;
-    }
     const signature = padRef.current?.toDataURL();
     if (!signature) {
       toast.error('Bubuhkan tanda tangan Anda pada kotak.');
@@ -63,7 +60,11 @@ export default function TandaTanganKontrakPage() {
     }
     setSubmitting(true);
     try {
-      await submitKontrakSign(token, { nama_penandatangan: nama.trim(), signature, setuju });
+      await submitKontrakSign(token, {
+        nama_penandatangan: nama.trim() || 'Karyawan',
+        signature,
+        setuju,
+      });
       setDone(true);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan tanda tangan.');
@@ -182,9 +183,9 @@ export default function TandaTanganKontrakPage() {
               </span>
             </label>
 
-            <div>
-              <Label required>Nama Lengkap</Label>
-              <Input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama sesuai KTP" />
+            <div className="rounded-xl bg-gray-50 p-3 text-sm">
+              <span className="text-gray-500">Menandatangani sebagai: </span>
+              <span className="font-semibold text-gray-900">{nama || '-'}</span>
             </div>
 
             <div>
