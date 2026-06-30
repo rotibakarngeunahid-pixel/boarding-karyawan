@@ -1,42 +1,26 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Stamp, Upload, Loader2, Save } from 'lucide-react';
+import { Stamp, Upload, Loader2, Move } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
-import { Input, Label } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  ApiError,
-  getStempel,
-  saveStempelSettings,
-  uploadStempel,
-  type StempelInfo,
-} from '@/lib/api';
+import { ApiError, getStempel, uploadStempel, type StempelInfo } from '@/lib/api';
+import { useCabangOptions } from '@/lib/useCabang';
+import { StempelPositioner } from '@/components/shared/StempelPositioner';
 
-// Upload + atur posisi stempel/cap perusahaan -> placeholder {{STEMPEL}}.
+// Upload + atur posisi (seret) stempel/cap perusahaan -> placeholder {{STEMPEL}}.
 export function StempelCard() {
+  const cabangOptions = useCabangOptions();
   const [info, setInfo] = useState<StempelInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // Kontrol posisi/ukuran
-  const [width, setWidth] = useState('120');
-  const [offy, setOffy] = useState('0');
-  const [offx, setOffx] = useState('0');
-
-  function applyInfo(i: StempelInfo) {
-    setInfo(i);
-    setWidth(String(i.settings.width));
-    setOffx(String(i.settings.offx));
-    setOffy(String(i.settings.offy));
-  }
 
   useEffect(() => {
     getStempel()
-      .then((i) => applyInfo(i))
+      .then(setInfo)
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -57,32 +41,13 @@ export function StempelCard() {
         url: `${res.url}?t=${Date.now()}`,
         filename: res.filename,
         uploaded_at: new Date().toISOString(),
-        settings: prev?.settings ?? { width: Number(width), offx: Number(offx), offy: Number(offy) },
+        settings: prev?.settings ?? { width: 120, offx: 0, offy: 0 },
       }));
       toast.success('Stempel berhasil diunggah.');
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mengunggah stempel.');
     } finally {
       setUploading(false);
-    }
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const s = await saveStempelSettings({
-        width: Number(width) || 120,
-        offx: Number(offx) || 0,
-        offy: Number(offy) || 0,
-      });
-      setWidth(String(s.width));
-      setOffx(String(s.offx));
-      setOffy(String(s.offy));
-      toast.success('Pengaturan disimpan. Buka Preview untuk melihat hasilnya.');
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : 'Gagal menyimpan pengaturan.');
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -116,6 +81,11 @@ export function StempelCard() {
               className="h-12 w-12 rounded-lg border border-gray-200 bg-white object-contain p-1"
             />
           )}
+          {info?.has_stempel && info.url && (
+            <Button size="sm" variant="outline" onClick={() => setEditorOpen(true)}>
+              <Move className="h-4 w-4" /> Atur Posisi
+            </Button>
+          )}
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
@@ -126,35 +96,6 @@ export function StempelCard() {
           </button>
         </div>
       </div>
-
-      {/* Kontrol posisi & ukuran */}
-      {info?.has_stempel && (
-        <div className="mt-4 rounded-xl border border-gray-100 bg-gray-50 p-3">
-          <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Atur Posisi Stempel</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <Label>Ukuran (px)</Label>
-              <Input type="number" min={40} max={400} value={width} onChange={(e) => setWidth(e.target.value)} />
-            </div>
-            <div>
-              <Label>Geser bawah (px)</Label>
-              <Input type="number" value={offy} onChange={(e) => setOffy(e.target.value)} placeholder="+ bawah / - atas" />
-            </div>
-            <div>
-              <Label>Geser kanan (px)</Label>
-              <Input type="number" value={offx} onChange={(e) => setOffx(e.target.value)} placeholder="+ kanan / - kiri" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <p className="text-xs text-gray-400">
-              0 = rapi di tempat placeholder. Geser bawah +30 s/d +60 untuk menumpuk nama.
-            </p>
-            <Button size="sm" onClick={handleSave} loading={saving}>
-              <Save className="h-4 w-4" /> Simpan Posisi
-            </Button>
-          </div>
-        </div>
-      )}
 
       <input
         ref={fileRef}
@@ -167,10 +108,20 @@ export function StempelCard() {
       <p className="mt-3 text-xs text-gray-400">
         Tips: stempel PNG latar transparan paling bagus. Di template Word, tulis{' '}
         <code className="text-gray-500">{'{{STEMPEL}}'}</code> di baris tepat di atas{' '}
-        <code className="text-gray-500">( Dwi Adithya )</code>. Setelah ubah posisi, klik{' '}
-        <span className="font-medium">Simpan Posisi</span> lalu cek lewat tombol{' '}
-        <span className="font-medium">Preview</span>.
+        <code className="text-gray-500">( Dwi Adithya )</code>. Lalu klik{' '}
+        <span className="font-medium">Atur Posisi</span> untuk menyeret stempel ke tempat yang pas.
       </p>
+
+      {info?.has_stempel && info.url && (
+        <StempelPositioner
+          open={editorOpen}
+          onClose={() => setEditorOpen(false)}
+          cabang={cabangOptions[0] ?? ''}
+          stampUrl={info.url}
+          settings={info.settings}
+          onSaved={(s) => setInfo((prev) => (prev ? { ...prev, settings: s } : prev))}
+        />
+      )}
     </Card>
   );
 }

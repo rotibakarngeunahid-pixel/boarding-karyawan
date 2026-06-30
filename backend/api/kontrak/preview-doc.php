@@ -50,7 +50,17 @@ try {
   if ($ext !== 'docx') json_error('Template bukan .docx.', 415); // frontend fallback ke teks
 
   $path = rtrim(UPLOAD_BASE, '/\\') . '/templates/' . $tpl['filename'];
-  $content = fill_docx_template($path, kontrak_placeholder_map($k), null, get_stempel_binary());
+
+  // Mode atur-posisi: ganti {{STEMPEL}} dgn penanda teks (tanpa gambar) agar
+  // editor frontend bisa menemukan titik placeholder lalu menaruh stempel seret.
+  $pos = isset($_GET['pos']) && $_GET['pos'] === '1';
+  $map = kontrak_placeholder_map($k);
+  if ($pos) {
+    $map['STEMPEL'] = 'RBNSTEMPELMARKER';
+    $content = fill_docx_template($path, $map, null, null);
+  } else {
+    $content = fill_docx_template($path, $map, null, get_stempel_binary());
+  }
 
   header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   header('Content-Disposition: inline; filename="kontrak.docx"');
