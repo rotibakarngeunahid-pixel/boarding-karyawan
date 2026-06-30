@@ -9,6 +9,7 @@ import {
   ApiError,
   getKontrakTemplates,
   getStempel,
+  saveStempelSettings,
   uploadStempel,
   type StempelInfo,
 } from '@/lib/api';
@@ -35,6 +36,17 @@ export function StempelCard() {
       })
       .catch(() => {});
   }, []);
+
+  async function handleResetPos() {
+    if (!info) return;
+    try {
+      const s = await saveStempelSettings({ width: info.settings.width || 120, offx: 0, offy: 0 });
+      setInfo({ ...info, settings: s });
+      toast.success('Posisi stempel direset ke tempat asli.');
+    } catch {
+      toast.error('Gagal reset posisi.');
+    }
+  }
 
   async function handleFile(file: File | null) {
     if (fileRef.current) fileRef.current.value = '';
@@ -96,6 +108,15 @@ export function StempelCard() {
             <Button size="sm" variant="outline" onClick={() => setEditorOpen(true)}>
               <Move className="h-4 w-4" /> Atur Posisi
             </Button>
+          )}
+          {info?.has_stempel && (
+            <button
+              onClick={handleResetPos}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              title="Kembalikan stempel ke posisi asli (di tempat placeholder)"
+            >
+              Reset Posisi
+            </button>
           )}
           <button
             onClick={() => fileRef.current?.click()}

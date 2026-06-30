@@ -32,7 +32,7 @@ export function StempelPositioner({
   const contentRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
 
-  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'ok' | 'error' | 'noimg'>('loading');
   const [saving, setSaving] = useState(false);
 
   const scaleRef = useRef(1); // skala docx
@@ -46,7 +46,7 @@ export function StempelPositioner({
       const headers: Record<string, string> = {};
       const t = getToken();
       if (t) headers['Authorization'] = `Bearer ${t}`;
-      const res = await fetch(kontrakPreviewDocUrl({ cabang }) + '&pos=1', { headers });
+      const res = await fetch(kontrakPreviewDocUrl({ cabang }), { headers });
       if (!res.ok) throw new Error('fetch');
       const buf = await res.arrayBuffer();
       const host = hostRef.current;
@@ -77,31 +77,27 @@ export function StempelPositioner({
         scaleRef.current = s;
       }
 
-      // Acuan = stempel ASLI di posisi natural (offset 0). Pakai gambar terakhir
-      // di dokumen (stempel biasanya satu-satunya gambar, di area tanda tangan).
-      const s = scaleRef.current;
+      // Acuan = stempel ASLI yang sedang dirender (memakai posisi tersimpan saat ini).
+      // Editor = preview normal -> "yang dilihat = yang dirender" (WYSIWYG).
+      // Stempel biasanya satu-satunya gambar (di area tanda tangan) -> ambil yang terakhir.
       const content = contentRef.current;
       const imgs = host.querySelectorAll<HTMLImageElement>('img');
       const stampImg = imgs.length ? imgs[imgs.length - 1] : null;
-      let baseW = settings.width * s;
-      if (stampImg && content) {
-        const r = stampImg.getBoundingClientRect();
-        const cr = content.getBoundingClientRect();
-        markerRef.current = { x: r.left - cr.left, y: r.top - cr.top };
-        if (r.width) baseW = r.width;
-        stampImg.style.opacity = '0'; // sembunyikan; yang diseret adalah overlay
-      } else {
-        markerRef.current = { x: 40, y: 80 };
+      if (!stampImg || !content) {
+        // Stempel belum tampil di dokumen (posisi lama nyasar / template belum ada {{STEMPEL}}).
+        setStatus('noimg');
+        return;
       }
+      const r = stampImg.getBoundingClientRect();
+      const cr = content.getBoundingClientRect();
+      markerRef.current = { x: r.left - cr.left, y: r.top - cr.top };
+      stampImg.style.opacity = '0'; // sembunyikan; yang diseret adalah overlay
 
-      setStamp({
-        left: markerRef.current.x + settings.offx * s,
-        top: markerRef.current.y + settings.offy * s,
-        w: baseW,
-      });
+      // Overlay menutup stempel asli; drag = selisih yang ditambahkan ke offset saat ini.
+      setStamp({ left: markerRef.current.x, top: markerRef.current.y, w: r.width || settings.width * scaleRef.current });
       setStatus('ok');
 
-      // Auto-scroll ke area tanda tangan (halaman terakhir) agar stempel langsung terlihat.
+      // Auto-scroll ke area stempel agar langsung terlihat.
       requestAnimationFrame(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = Math.max(0, markerRef.current.y - 140);
@@ -146,10 +142,11 @@ export function StempelPositioner({
 
   async function handleSave() {
     const s = scaleRef.current || 1;
+    // Offset baru = offset saat ini + selisih seret (acuan = posisi terender saat ini).
     const payload: StempelSettings = {
       width: Math.round(stamp.w / s),
-      offx: Math.round((stamp.left - markerRef.current.x) / s),
-      offy: Math.round((stamp.top - markerRef.current.y) / s),
+      offx: settings.offx + Math.round((stamp.left - markerRef.current.x) / s),
+      offy: settings.offy + Math.round((stamp.top - markerRef.current.y) / s),
     };
     setSaving(true);
     try {
@@ -202,8 +199,15 @@ export function StempelPositioner({
             Gagal memuat preview. Pastikan template untuk cabang ini sudah ada (.docx).
           </p>
         )}
+        {status === 'noimg' && (
+          <div className="mx-auto max-w-md rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800">
+            Stempel belum tampil di dokumen. Tutup editor ini, klik{' '}
+            <span className="font-semibold">Reset Posisi</span> pada kartu Stempel, lalu buka lagi. Pastikan
+            template memuat <code>{'{{STEMPEL}}'}</code>.
+          </div>
+        )}
         <div ref={contentRef} className="relative w-full">
-          <div ref={hostRef} className="rbn-docx" />
+          <div ref={hostRef} className="rbn-docx" style={{ overflow: 'visible' }} />
           {status === 'ok' && (
             <div className="pointer-events-none absolute inset-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
