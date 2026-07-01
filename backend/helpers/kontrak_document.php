@@ -183,6 +183,46 @@ function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string 
 }
 
 /**
+ * Perkecil gambar besar (mis. stempel 1024×1024 ~1.8MB) sebelum ditanam ke .docx.
+ * Tujuan: dokumen preview/kontrak jadi ringan (puluhan KB, bukan MB) sehingga
+ * ANDAL & cepat dirender docx-preview di semua perangkat (HP/koneksi lambat) —
+ * penyebab utama "stempel tidak muncul" adalah preview berat lalu gagal dimuat.
+ * Transparansi PNG dipertahankan. Bila gagal/tak perlu -> kembalikan biner asli.
+ */
+function docx_downscale_image(string $bin, int $maxSide = 480): string {
+  if (!function_exists('imagecreatefromstring') || !function_exists('getimagesizefromstring')) return $bin;
+  $info = @getimagesizefromstring($bin);
+  if (!$info || ($info[0] ?? 0) <= 0 || ($info[1] ?? 0) <= 0) return $bin;
+  $w = (int) $info[0];
+  $h = (int) $info[1];
+  $long = max($w, $h);
+  if ($long <= $maxSide) return $bin; // sudah cukup kecil, biarkan.
+
+  $isJpg = (($info[2] ?? 0) === IMAGETYPE_JPEG);
+  $src = @imagecreatefromstring($bin);
+  if (!$src) return $bin;
+
+  $scale = $maxSide / $long;
+  $nw = max(1, (int) round($w * $scale));
+  $nh = max(1, (int) round($h * $scale));
+  $dst = imagecreatetruecolor($nw, $nh);
+  if (!$isJpg) {
+    imagealphablending($dst, false);
+    imagesavealpha($dst, true);
+    $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+    imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
+  }
+  imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+
+  ob_start();
+  $ok = $isJpg ? imagejpeg($dst, null, 85) : imagepng($dst, null, 6);
+  $out = ob_get_clean();
+  imagedestroy($src);
+  imagedestroy($dst);
+  return ($ok && $out !== false && $out !== '') ? $out : $bin;
+}
+
+/**
  * Isi placeholder {{...}} ke dalam file .docx (mempertahankan format asli:
  * tabel, bold, heading, dll.) lalu kembalikan biner .docx hasilnya.
  * Mencakup body + header + footer dokumen. Dapat menyisipkan gambar tanda
@@ -223,6 +263,8 @@ function fill_docx_template(
     $ss = $stempelOverride ?? (function_exists('get_stempel_settings')
       ? get_stempel_settings()
       : ['width' => 120]);
+    // Perkecil stempel besar dulu -> dokumen ringan & preview andal di semua perangkat.
+    $stempelPng = docx_downscale_image($stempelPng, 480);
     $imgs['STEMPEL'] = ['bin' => $stempelPng, 'w' => (int) ($ss['width'] ?? 120), 'offx' => 0, 'offy' => 0];
   }
 

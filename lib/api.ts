@@ -100,6 +100,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     res = await fetch(`${API_URL}${path}`, {
       method,
       headers,
+      // Selalu ambil data terbaru dari backend (mis. daftar template setelah ganti),
+      // jangan pakai cache browser -> cegah "template tidak berganti" karena cache.
+      cache: 'no-store',
       body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined,
     });
   } catch {
