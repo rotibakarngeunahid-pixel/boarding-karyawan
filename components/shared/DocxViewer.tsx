@@ -65,9 +65,10 @@ export function DocxViewer({
           const t = getToken();
           if (t) headers['Authorization'] = `Bearer ${t}`;
         }
-        // cache:'no-store' -> selalu ambil versi terbaru (hindari preview basi
-        // saat template/stempel baru diubah di server).
-        const res = await fetch(url, { headers, cache: 'no-store' });
+        // Cache-buster (_t unik) + cache:'no-store' -> selalu ambil versi TERBARU.
+        // Menghindari preview basi setelah template/stempel diganti di server.
+        const bust = `${url.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+        const res = await fetch(url + bust, { headers, cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buf = await res.arrayBuffer();
         if (cancelled) return;
