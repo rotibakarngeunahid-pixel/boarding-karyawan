@@ -1,25 +1,22 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Stamp, Upload, Loader2, Move } from 'lucide-react';
+import { Stamp, Upload, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import {
   ApiError,
   getStempel,
-  saveStempelSettings,
   uploadStempel,
   type StempelInfo,
 } from '@/lib/api';
-import { StempelPositioner } from '@/components/shared/StempelPositioner';
 
-// Upload + atur posisi (seret) stempel/cap perusahaan -> placeholder {{STEMPEL}}.
+// Upload stempel/cap perusahaan. Stempel muncul PERSIS di tempat placeholder
+// {{STEMPEL}} pada template (mengambang, tidak menggeser layout).
 export function StempelCard() {
   const [info, setInfo] = useState<StempelInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [editorOpen, setEditorOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -28,17 +25,6 @@ export function StempelCard() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-
-  async function handleResetPos() {
-    if (!info) return;
-    try {
-      const s = await saveStempelSettings({ width: info.settings.width || 120, offx: 0, offy: 0 });
-      setInfo({ ...info, settings: s });
-      toast.success('Posisi stempel direset ke tempat asli.');
-    } catch {
-      toast.error('Gagal reset posisi.');
-    }
-  }
 
   async function handleFile(file: File | null) {
     if (fileRef.current) fileRef.current.value = '';
@@ -96,20 +82,6 @@ export function StempelCard() {
               className="h-12 w-12 rounded-lg border border-gray-200 bg-white object-contain p-1"
             />
           )}
-          {info?.has_stempel && info.url && (
-            <Button size="sm" variant="outline" onClick={() => setEditorOpen(true)}>
-              <Move className="h-4 w-4" /> Atur Posisi
-            </Button>
-          )}
-          {info?.has_stempel && (
-            <button
-              onClick={handleResetPos}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              title="Kembalikan stempel ke posisi asli (di tempat placeholder)"
-            >
-              Reset Posisi
-            </button>
-          )}
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
@@ -131,21 +103,10 @@ export function StempelCard() {
 
       <p className="mt-3 text-xs text-gray-400">
         Tips: stempel PNG latar transparan paling bagus. Di template Word, tulis{' '}
-        <code className="text-gray-500">{'{{STEMPEL}}'}</code> di baris tepat di atas{' '}
-        <code className="text-gray-500">( Dwi Adithya )</code>. Lalu klik{' '}
-        <span className="font-medium">Atur Posisi</span> untuk menyeret stempel ke tempat yang pas.
+        <code className="text-gray-500">{'{{STEMPEL}}'}</code> tepat di tempat yang Anda ingin
+        stempel muncul (mis. di atas <code className="text-gray-500">( Dwi Adithya )</code>). Stempel
+        akan tampil persis di titik itu tanpa mengubah tata letak dokumen.
       </p>
-
-      {info?.has_stempel && info.url && (
-        <StempelPositioner
-          open={editorOpen}
-          onClose={() => setEditorOpen(false)}
-          cabang={info.preview_cabang ?? ''}
-          stampUrl={info.url}
-          settings={info.settings}
-          onSaved={(s) => setInfo((prev) => (prev ? { ...prev, settings: s } : prev))}
-        />
-      )}
     </Card>
   );
 }

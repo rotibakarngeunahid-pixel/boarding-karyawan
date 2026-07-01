@@ -99,12 +99,13 @@ function kontrak_placeholder_map(array $k): array {
 if (!defined('STEMPEL_ANCHOR_TEXT')) define('STEMPEL_ANCHOR_TEXT', 'Adithya');
 
 /**
- * Sisipkan stempel otomatis sebelum kemunculan TERAKHIR teks acuan
- * (nama pemilik di blok tanda tangan), tanpa perlu placeholder {{STEMPEL}}.
+ * Sisipkan stempel otomatis di blok tanda tangan, tepat DI ATAS nama pemilik
+ * (PIHAK PERTAMA) — tanpa perlu placeholder {{STEMPEL}}.
  *
- * Jika teks acuan berada di dalam sel tabel, stempel disisipkan sebagai
- * paragraf mandiri SEBELUM tabel — supaya docx-preview bisa merender
- * anchor floating dengan benar (anchor di dalam <w:tc> tidak dirender).
+ * Stempel dipasang sebagai paragraf berisi gambar MENGAMBANG (wp:anchor,
+ * wrapNone) di dalam sel yang sama dengan nama pemilik. Karena mengambang,
+ * ia tidak menambah tinggi sel -> nama PIHAK PERTAMA & PIHAK KEDUA tetap
+ * sejajar. docx-preview merender anchor di dalam sel dengan benar (teruji).
  */
 function stempel_auto_anchor(string $xml, string $draw): string {
   $anchor = STEMPEL_ANCHOR_TEXT;
@@ -125,38 +126,17 @@ function stempel_auto_anchor(string $xml, string $draw): string {
 
   if ($xmlPos === false) return $xml;
 
+  // Cari awal PARAGRAF <w:p> yang memuat nama pemilik.
   $head = substr($xml, 0, $xmlPos);
+  $pa = strrpos($head, '<w:p ');
+  $pb = strrpos($head, '<w:p>');
+  $pStart = max($pa === false ? -1 : $pa, $pb === false ? -1 : $pb);
+  if ($pStart < 0) return $xml;
 
-  // Deteksi apakah teks acuan berada di dalam tabel.
-  $insideTable = substr_count($head, '<w:tbl') > substr_count($head, '</w:tbl>');
-
-  if ($insideTable) {
-    // Cari awal tabel tanda tangan: <w:tbl> pertama SETELAH </w:tbl> terakhir yang tertutup.
-    $lastClose = strrpos($head, '</w:tbl>');
-    $tblStart  = ($lastClose !== false)
-      ? strpos($head, '<w:tbl', $lastClose)
-      : strpos($head, '<w:tbl');
-
-    if ($tblStart !== false) {
-      // Sisipkan drawing ke dalam paragraf terakhir SEBELUM tabel tanda tangan.
-      // Paragraf yang sudah ada (mis. baris tanggal) memiliki tinggi nyata sehingga
-      // docx-preview dapat menghitung posisi relativeFrom="paragraph" dengan benar.
-      $beforeTbl  = substr($xml, 0, $tblStart);
-      $lastParaEnd = strrpos($beforeTbl, '</w:p>');
-      if ($lastParaEnd !== false) {
-        return substr($xml, 0, $lastParaEnd)
-          . '<w:r>' . $draw . '</w:r>'
-          . substr($xml, $lastParaEnd);
-      }
-    }
-  }
-
-  // Tidak di dalam tabel: sisipkan sebelum <w:r> yang membungkus teks acuan.
-  $a = strrpos($head, '<w:r ');
-  $b = strrpos($head, '<w:r>');
-  $start = max($a === false ? -1 : $a, $b === false ? -1 : $b);
-  if ($start < 0) return $xml;
-  return substr($xml, 0, $start) . '<w:r>' . $draw . '</w:r>' . substr($xml, $start);
+  // Sisipkan paragraf berisi stempel (anchor floating) SEBELUM paragraf nama,
+  // di dalam sel yang sama -> tampil di atas nama, tanpa menggeser layout.
+  $stempelPara = '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r>' . $draw . '</w:r></w:p>';
+  return substr($xml, 0, $pStart) . $stempelPara . substr($xml, $pStart);
 }
 
 /** Markup gambar MENGAMBANG (wp:anchor, wrapNone) -> bisa menimpa teks. */
@@ -237,10 +217,13 @@ function fill_docx_template(
     $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 190, 'offx' => 0, 'offy' => 0];
   }
   if ($stempelPng !== null && $stempelPng !== '') {
+    // Stempel dipasang PERSIS di titik placeholder {{STEMPEL}} (offset 0,0).
+    // Tidak ada fitur atur posisi: penempatan sepenuhnya ditentukan oleh lokasi
+    // {{STEMPEL}} di template. Hanya lebar yang dibaca dari pengaturan.
     $ss = $stempelOverride ?? (function_exists('get_stempel_settings')
       ? get_stempel_settings()
-      : ['width' => 120, 'offx' => 0, 'offy' => 0]);
-    $imgs['STEMPEL'] = ['bin' => $stempelPng, 'w' => (int) $ss['width'], 'offx' => (int) $ss['offx'], 'offy' => (int) $ss['offy']];
+      : ['width' => 120]);
+    $imgs['STEMPEL'] = ['bin' => $stempelPng, 'w' => (int) ($ss['width'] ?? 120), 'offx' => 0, 'offy' => 0];
   }
 
   $drawings = [];  // placeholder => markup
