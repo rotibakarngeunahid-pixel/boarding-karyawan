@@ -290,13 +290,11 @@ function fill_docx_template(
     $relNodes[] = '<Relationship Id="' . $rid . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $media . '"/>';
     $offX = (int) round(((int) ($img['offx'] ?? 0)) * 9525);
     $offY = (int) round(((int) ($img['offy'] ?? 0)) * 9525);
-    // Stempel pakai anchor (mengambang, wrapNone) agar tidak mempengaruhi layout dokumen.
-    // Tanda tangan tetap inline mengikuti alur teks.
-    if ($ph === 'STEMPEL') {
-      $drawings[$ph] = docx_build_anchor_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
-    } else {
-      $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
-    }
+    // Stempel & tanda tangan sama-sama INLINE (mengikuti alur teks). Mode inline
+    // paling ANDAL dirender docx-preview di semua perangkat; mode "mengambang"
+    // (anchor/wrapNone) sering tak tampil di HP karena gambar di kotak 0×0 yang
+    // ter-clip. Inline sedikit menambah tinggi baris — itu wajar & aman.
+    $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
   }
 
   // Tulis relationships SEKALI (hindari masalah getFromName setelah addFromString).
