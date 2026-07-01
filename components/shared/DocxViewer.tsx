@@ -65,7 +65,9 @@ export function DocxViewer({
           const t = getToken();
           if (t) headers['Authorization'] = `Bearer ${t}`;
         }
-        const res = await fetch(url, { headers });
+        // cache:'no-store' -> selalu ambil versi terbaru (hindari preview basi
+        // saat template/stempel baru diubah di server).
+        const res = await fetch(url, { headers, cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const buf = await res.arrayBuffer();
         if (cancelled) return;

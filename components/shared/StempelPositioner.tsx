@@ -46,7 +46,7 @@ export function StempelPositioner({
       const headers: Record<string, string> = {};
       const t = getToken();
       if (t) headers['Authorization'] = `Bearer ${t}`;
-      const res = await fetch(kontrakPreviewDocUrl({ cabang }), { headers });
+      const res = await fetch(kontrakPreviewDocUrl({ cabang }), { headers, cache: 'no-store' });
       if (!res.ok) throw new Error('fetch');
       const buf = await res.arrayBuffer();
       const host = hostRef.current;
@@ -56,6 +56,8 @@ export function StempelPositioner({
       await renderAsync(buf, host, undefined, {
         className: 'docx',
         inWrapper: true,
+        ignoreWidth: false,
+        ignoreHeight: false,
         breakPages: true,
         renderHeaders: true,
         renderFooters: true,
@@ -77,14 +79,21 @@ export function StempelPositioner({
         scaleRef.current = s;
       }
 
-      // Acuan = stempel ASLI yang sedang dirender (memakai posisi tersimpan saat ini).
-      // Editor = preview normal -> "yang dilihat = yang dirender" (WYSIWYG).
-      // Stempel biasanya satu-satunya gambar (di area tanda tangan) -> ambil yang terakhir.
+      // Anchor image (stempel floating) perlu satu frame ekstra agar posisi settled.
+      await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+
+      // Cari stempel: gambar dengan posisi Y paling bawah di dokumen = signing block.
+      // Header bisa punya logo (y kecil), stempel anchor selalu paling bawah.
       const content = contentRef.current;
-      const imgs = host.querySelectorAll<HTMLImageElement>('img');
-      const stampImg = imgs.length ? imgs[imgs.length - 1] : null;
+      const allImgs = Array.from(host.querySelectorAll<HTMLImageElement>('img'));
+      const visibleImgs = allImgs.filter((img) => img.getBoundingClientRect().width > 0);
+      const stampImg = visibleImgs.length
+        ? visibleImgs.reduce((best, img) =>
+            img.getBoundingClientRect().top > best.getBoundingClientRect().top ? img : best
+          )
+        : null;
       if (!stampImg || !content) {
-        // Stempel belum tampil di dokumen (posisi lama nyasar / template belum ada {{STEMPEL}}).
+        // Stempel belum tampil / posisi nyasar ke luar halaman -> minta user Reset Posisi.
         setStatus('noimg');
         return;
       }

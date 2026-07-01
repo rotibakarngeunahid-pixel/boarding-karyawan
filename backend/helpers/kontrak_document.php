@@ -101,14 +101,57 @@ if (!defined('STEMPEL_ANCHOR_TEXT')) define('STEMPEL_ANCHOR_TEXT', 'Adithya');
 /**
  * Sisipkan stempel otomatis sebelum kemunculan TERAKHIR teks acuan
  * (nama pemilik di blok tanda tangan), tanpa perlu placeholder {{STEMPEL}}.
+ *
+ * Jika teks acuan berada di dalam sel tabel, stempel disisipkan sebagai
+ * paragraf mandiri SEBELUM tabel — supaya docx-preview bisa merender
+ * anchor floating dengan benar (anchor di dalam <w:tc> tidak dirender).
  */
 function stempel_auto_anchor(string $xml, string $draw): string {
   $anchor = STEMPEL_ANCHOR_TEXT;
-  // Kemunculan TERAKHIR teks acuan (= blok tanda tangan, bukan tabel data atas).
-  $p = strrpos($xml, $anchor);
-  if ($p === false) return $xml;
-  // Mundur ke awal <w:r ...> / <w:r> yang membungkus teks ini (tanpa regex berat).
-  $head = substr($xml, 0, $p);
+
+  // Coba cari teks acuan secara langsung (bila ada dalam satu run XML).
+  $xmlPos = strrpos($xml, $anchor);
+
+  if ($xmlPos === false) {
+    // Word sering memecah kata ke beberapa run (spell-check, lang-mark, dsb).
+    $chars = preg_split('//u', $anchor, -1, PREG_SPLIT_NO_EMPTY);
+    $parts = [];
+    foreach ($chars as $c) $parts[] = preg_quote($c, '/');
+    $pat = implode('(?:<[^>]*>)*', $parts);
+    if (preg_match_all('/' . $pat . '/s', $xml, $m, PREG_OFFSET_CAPTURE)) {
+      $xmlPos = end($m[0])[1];
+    }
+  }
+
+  if ($xmlPos === false) return $xml;
+
+  $head = substr($xml, 0, $xmlPos);
+
+  // Deteksi apakah teks acuan berada di dalam tabel.
+  $insideTable = substr_count($head, '<w:tbl') > substr_count($head, '</w:tbl>');
+
+  if ($insideTable) {
+    // Cari awal tabel tanda tangan: <w:tbl> pertama SETELAH </w:tbl> terakhir yang tertutup.
+    $lastClose = strrpos($head, '</w:tbl>');
+    $tblStart  = ($lastClose !== false)
+      ? strpos($head, '<w:tbl', $lastClose)
+      : strpos($head, '<w:tbl');
+
+    if ($tblStart !== false) {
+      // Sisipkan drawing ke dalam paragraf terakhir SEBELUM tabel tanda tangan.
+      // Paragraf yang sudah ada (mis. baris tanggal) memiliki tinggi nyata sehingga
+      // docx-preview dapat menghitung posisi relativeFrom="paragraph" dengan benar.
+      $beforeTbl  = substr($xml, 0, $tblStart);
+      $lastParaEnd = strrpos($beforeTbl, '</w:p>');
+      if ($lastParaEnd !== false) {
+        return substr($xml, 0, $lastParaEnd)
+          . '<w:r>' . $draw . '</w:r>'
+          . substr($xml, $lastParaEnd);
+      }
+    }
+  }
+
+  // Tidak di dalam tabel: sisipkan sebelum <w:r> yang membungkus teks acuan.
   $a = strrpos($head, '<w:r ');
   $b = strrpos($head, '<w:r>');
   $start = max($a === false ? -1 : $a, $b === false ? -1 : $b);
@@ -141,11 +184,7 @@ function docx_build_anchor_drawing(string $rid, int $cx, int $cy, int $id, strin
     . '</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>';
 }
 
-/**
- * Markup gambar INLINE (wp:inline) untuk menggantikan placeholder.
- * $offY (EMU) menggeser gambar ke bawah secara visual (position:relative) agar
- * bisa menumpuk teks di bawahnya — tanpa merusak posisi tengah/baris.
- */
+/** Markup gambar INLINE (wp:inline) untuk tanda tangan — mengikuti alur teks. */
 function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string $name, int $offX = 0, int $offY = 0): string {
   return '<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" '
     . 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">'
@@ -167,7 +206,7 @@ function docx_build_drawing(string $rid, int $cx, int $cy, int $docprId, string 
  * Isi placeholder {{...}} ke dalam file .docx (mempertahankan format asli:
  * tabel, bold, heading, dll.) lalu kembalikan biner .docx hasilnya.
  * Mencakup body + header + footer dokumen. Dapat menyisipkan gambar tanda
- * tangan ({{TANDA_TANGAN}}) dan stempel ({{STEMPEL}}) secara inline.
+ * tangan ({{TANDA_TANGAN}}, inline) dan stempel ({{STEMPEL}}, anchor floating).
  *
  * @throws RuntimeException bila gagal.
  */
@@ -224,10 +263,15 @@ function fill_docx_template(
     $cy = $h * 9525;
     $zip->addFromString('word/media/' . $media, $img['bin']);
     $relNodes[] = '<Relationship Id="' . $rid . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/' . $media . '"/>';
-    // Inline (andal & di tengah). Geser sesuai pengaturan (px -> EMU).
     $offX = (int) round(((int) ($img['offx'] ?? 0)) * 9525);
     $offY = (int) round(((int) ($img['offy'] ?? 0)) * 9525);
-    $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
+    // Stempel pakai anchor (mengambang, wrapNone) agar tidak mempengaruhi layout dokumen.
+    // Tanda tangan tetap inline mengikuti alur teks.
+    if ($ph === 'STEMPEL') {
+      $drawings[$ph] = docx_build_anchor_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
+    } else {
+      $drawings[$ph] = docx_build_drawing($rid, $cx, $cy, 1000 + $idc, ucfirst(strtolower($ph)), $offX, $offY);
+    }
   }
 
   // Tulis relationships SEKALI (hindari masalah getFromName setelah addFromString).
@@ -298,6 +342,7 @@ function fill_docx_template(
           );
           // STEMPEL: bila placeholder {{STEMPEL}} tidak ada, taruh OTOMATIS di
           // blok tanda tangan (sebelum nama pemilik) -> tak perlu tulis {{STEMPEL}}.
+          // Stempel pakai anchor (wrapNone) sehingga tidak menggeser layout apapun.
           if ($ph === 'STEMPEL' && $cnt === 0) {
             $xml = stempel_auto_anchor($xml, $draw);
           }

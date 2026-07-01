@@ -67,6 +67,9 @@ try {
 
   header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   header('Content-Disposition: inline; filename="kontrak.docx"');
+  // Jangan cache: preview harus selalu ikut perubahan template/stempel terbaru.
+  header('Cache-Control: no-store, no-cache, must-revalidate');
+  header('Pragma: no-cache');
   header('Content-Length: ' . strlen($content));
   echo $content;
   exit;
