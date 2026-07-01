@@ -21,6 +21,25 @@ try {
   if ($kontrak_id > 0) {
     $k = get_kontrak_document_data($db, $kontrak_id);
     if (!$k) json_error('Kontrak tidak ditemukan.', 404);
+
+    // Bila sudah ditandatangani & ada snapshot .docx -> kirim snapshot itu
+    // (sudah memuat tanda tangan karyawan + stempel). Jadi admin pun melihat
+    // tanda tangan karyawan di atas namanya, persis dokumen yang disetujui.
+    if (!empty($k['snapshot_docx_path'])) {
+      $snap = rtrim(UPLOAD_BASE, '/\\') . '/' . $k['snapshot_docx_path'];
+      if (is_file($snap)) {
+        $bin = file_get_contents($snap);
+        if ($bin !== false) {
+          header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+          header('Content-Disposition: inline; filename="kontrak.docx"');
+          header('Cache-Control: no-store, no-cache, must-revalidate');
+          header('Pragma: no-cache');
+          header('Content-Length: ' . strlen($bin));
+          echo $bin;
+          exit;
+        }
+      }
+    }
   } else {
     // Mode preview template per cabang -> data contoh.
     $cabang = isset($_GET['cabang']) ? trim((string) $_GET['cabang']) : '';

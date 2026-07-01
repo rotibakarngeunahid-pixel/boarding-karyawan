@@ -99,16 +99,16 @@ function kontrak_placeholder_map(array $k): array {
 if (!defined('STEMPEL_ANCHOR_TEXT')) define('STEMPEL_ANCHOR_TEXT', 'Adithya');
 
 /**
- * Sisipkan stempel otomatis di blok tanda tangan, tepat DI ATAS nama pemilik
- * (PIHAK PERTAMA) — tanpa perlu placeholder {{STEMPEL}}.
- *
- * Stempel dipasang sebagai paragraf berisi gambar MENGAMBANG (wp:anchor,
- * wrapNone) di dalam sel yang sama dengan nama pemilik. Karena mengambang,
- * ia tidak menambah tinggi sel -> nama PIHAK PERTAMA & PIHAK KEDUA tetap
- * sejajar. docx-preview merender anchor di dalam sel dengan benar (teruji).
+ * Sisipkan gambar (stempel / tanda tangan) sebagai paragraf tersendiri TEPAT
+ * DI ATAS paragraf yang memuat teks acuan $anchor — tanpa perlu placeholder.
+ * Dipakai untuk:
+ *  - Stempel: acuan = nama pemilik (PIHAK PERTAMA), mis. "Adithya".
+ *  - Tanda tangan karyawan: acuan = placeholder nama karyawan (PIHAK KEDUA).
+ * Memakai kemunculan TERAKHIR $anchor karena blok tanda tangan ada di bawah
+ * dokumen (nama yang sama juga muncul di tabel identitas atas).
  */
-function stempel_auto_anchor(string $xml, string $draw): string {
-  $anchor = STEMPEL_ANCHOR_TEXT;
+function image_auto_anchor_before(string $xml, string $draw, string $anchor): string {
+  if ($anchor === '') return $xml;
 
   // Coba cari teks acuan secara langsung (bila ada dalam satu run XML).
   $xmlPos = strrpos($xml, $anchor);
@@ -126,17 +126,40 @@ function stempel_auto_anchor(string $xml, string $draw): string {
 
   if ($xmlPos === false) return $xml;
 
-  // Cari awal PARAGRAF <w:p> yang memuat nama pemilik.
+  // Cari awal PARAGRAF <w:p> yang memuat teks acuan.
   $head = substr($xml, 0, $xmlPos);
   $pa = strrpos($head, '<w:p ');
   $pb = strrpos($head, '<w:p>');
   $pStart = max($pa === false ? -1 : $pa, $pb === false ? -1 : $pb);
   if ($pStart < 0) return $xml;
 
-  // Sisipkan paragraf berisi stempel (anchor floating) SEBELUM paragraf nama,
-  // di dalam sel yang sama -> tampil di atas nama, tanpa menggeser layout.
-  $stempelPara = '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r>' . $draw . '</w:r></w:p>';
-  return substr($xml, 0, $pStart) . $stempelPara . substr($xml, $pStart);
+  // Sisipkan paragraf berisi gambar (inline, rata tengah) SEBELUM paragraf acuan,
+  // di dalam sel yang sama -> tampil tepat di atas nama.
+  $imgPara = '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r>' . $draw . '</w:r></w:p>';
+  return substr($xml, 0, $pStart) . $imgPara . substr($xml, $pStart);
+}
+
+/** Stempel otomatis di atas nama pemilik (PIHAK PERTAMA) — tanpa {{STEMPEL}}. */
+function stempel_auto_anchor(string $xml, string $draw): string {
+  return image_auto_anchor_before($xml, $draw, STEMPEL_ANCHOR_TEXT);
+}
+
+/**
+ * Tanda tangan karyawan otomatis di atas namanya (PIHAK KEDUA) — tanpa perlu
+ * placeholder {{TANDA_TANGAN}}. Acuan = placeholder nama karyawan yang muncul
+ * PALING AKHIR (blok tanda tangan), pakai NAMA_PANGGILAN lalu NAMA_LENGKAP.
+ * Dipanggil SEBELUM placeholder diganti nilai (jadi masih berupa {{...}}).
+ */
+function signature_auto_anchor(string $xml, string $draw): string {
+  $posP = strrpos($xml, '{{NAMA_PANGGILAN}}');
+  $posL = strrpos($xml, '{{NAMA_LENGKAP}}');
+  $anchor = '';
+  if ($posP !== false && ($posL === false || $posP >= $posL)) {
+    $anchor = '{{NAMA_PANGGILAN}}';
+  } elseif ($posL !== false) {
+    $anchor = '{{NAMA_LENGKAP}}';
+  }
+  return image_auto_anchor_before($xml, $draw, $anchor);
 }
 
 /** Markup gambar MENGAMBANG (wp:anchor, wrapNone) -> bisa menimpa teks. */
@@ -363,11 +386,16 @@ function fill_docx_template(
             1,
             $cnt
           );
-          // STEMPEL: bila placeholder {{STEMPEL}} tidak ada, taruh OTOMATIS di
-          // blok tanda tangan (sebelum nama pemilik) -> tak perlu tulis {{STEMPEL}}.
-          // Stempel pakai anchor (wrapNone) sehingga tidak menggeser layout apapun.
-          if ($ph === 'STEMPEL' && $cnt === 0) {
-            $xml = stempel_auto_anchor($xml, $draw);
+          // Bila placeholder tidak ada di template, taruh gambar OTOMATIS di blok
+          // tanda tangan (tepat di atas nama) -> tak perlu menulis placeholder.
+          if ($cnt === 0) {
+            if ($ph === 'STEMPEL') {
+              // Stempel di atas nama pemilik (PIHAK PERTAMA).
+              $xml = stempel_auto_anchor($xml, $draw);
+            } elseif ($ph === 'TANDA_TANGAN') {
+              // Tanda tangan karyawan di atas namanya (PIHAK KEDUA).
+              $xml = signature_auto_anchor($xml, $draw);
+            }
           }
         }
       }
