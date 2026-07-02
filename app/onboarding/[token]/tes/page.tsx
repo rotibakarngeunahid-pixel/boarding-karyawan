@@ -173,14 +173,19 @@ function TesContent() {
               <p className="mt-6 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
                 {lulus
                   ? 'Selamat, kamu LULUS! Tim RBN akan menghubungi kamu melalui WhatsApp untuk proses kontrak. Terima kasih! 🙏'
-                  : 'Tim RBN akan menghubungi kamu melalui WhatsApp. Terima kasih! 🙏'}
+                  : (hasil.sisa_percobaan ?? 0) > 0
+                    ? 'Silakan coba lagi untuk meningkatkan skor. Kamu pasti bisa! 💪'
+                    : 'Tim RBN akan menghubungi kamu melalui WhatsApp. Terima kasih! 🙏'}
               </p>
             )}
           </div>
 
-          {/* Detail jawaban */}
+          {/* Detail jawaban — saat TIDAK lulus, jawaban benar TIDAK ditampilkan
+              agar percobaan berikutnya tetap ujian yang murni. */}
           <div className="mt-6 space-y-3">
-            <h2 className="text-base font-semibold text-gray-900">Pembahasan Jawaban</h2>
+            <h2 className="text-base font-semibold text-gray-900">
+              {lulus ? 'Pembahasan Jawaban' : 'Jawaban Kamu'}
+            </h2>
             {detail.map((d, i) => (
               <div key={d.soal_id} className="rounded-xl border border-gray-200 bg-white p-4">
                 <div className="flex items-start gap-2">
@@ -198,7 +203,7 @@ function TesContent() {
                       <span className={d.benar ? 'text-green-600' : 'text-red-600'}>
                         {d.jawaban_user ? d.jawaban_user.toUpperCase() : '(kosong)'}
                       </span>
-                      {!d.benar && (
+                      {lulus && !d.benar && d.jawaban_benar && (
                         <>
                           {' · '}Jawaban benar:{' '}
                           <span className="text-green-600">{d.jawaban_benar.toUpperCase()}</span>

@@ -145,6 +145,15 @@ function collect_karyawan_columns(PDO $db, array $post, array $files, bool $file
       json_error('Nilai tidak valid untuk: ' . $f['label'], 422);
     }
 
+    // Field tanggal wajib ISO YYYY-MM-DD & tanggal kalender sah (mis. tolak 30 Feb).
+    if ($val !== '' && $f['tipe'] === 'date') {
+      $ok = preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $val, $dm)
+        && checkdate((int) $dm[2], (int) $dm[3], (int) $dm[1]);
+      if (!$ok) {
+        json_error('Tanggal tidak valid untuk: ' . $f['label'], 422);
+      }
+    }
+
     if ($f['is_builtin'] && $f['kolom_db']) {
       $columns[$f['kolom_db']] = ($val !== '') ? $val : null;
     } elseif (!$f['is_builtin']) {

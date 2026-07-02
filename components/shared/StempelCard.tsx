@@ -103,9 +103,11 @@ export function StempelCard() {
 
       <p className="mt-3 text-xs text-gray-400">
         Tips: stempel PNG latar transparan paling bagus. Di template Word, tulis{' '}
-        <code className="text-gray-500">{'{{STEMPEL}}'}</code> tepat di tempat yang Anda ingin
-        stempel muncul (mis. di atas <code className="text-gray-500">( Dwi Adithya )</code>). Stempel
-        akan tampil persis di titik itu tanpa mengubah tata letak dokumen.
+        <code className="text-gray-500">{'{{STEMPEL}}'}</code> tepat di tempat stempel muncul (mis.
+        di atas <code className="text-gray-500">( Dwi Adithya )</code>, PIHAK PERTAMA) dan{' '}
+        <code className="text-gray-500">{'{{TANDA_TANGAN}}'}</code> di tempat tanda tangan karyawan
+        (di atas namanya, PIHAK KEDUA). Tanpa placeholder pun keduanya otomatis ditaruh di atas
+        nama masing-masing. Tinggi stempel &amp; tanda tangan disamakan otomatis agar sejajar.
       </p>
     </Card>
   );

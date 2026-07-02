@@ -191,7 +191,7 @@ export interface DetailJawaban {
   soal_id: number;
   pertanyaan: string;
   jawaban_user: PilihanJawaban | null;
-  jawaban_benar: PilihanJawaban;
+  jawaban_benar?: PilihanJawaban; // TIDAK dikirim API saat kandidat gagal (integritas retry)
   benar: boolean;
   poin: number;
 }

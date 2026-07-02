@@ -246,6 +246,36 @@ function docx_downscale_image(string $bin, int $maxSide = 480): string {
 }
 
 /**
+ * Tambahkan bantalan TRANSPARAN di ATAS gambar (px pada resolusi alami gambar).
+ * Dipakai untuk MENYAMAKAN TINGGI TAMPIL stempel & tanda tangan: gambar yang
+ * lebih pendek diberi bantalan sehingga kotak keduanya sama tinggi, bagian
+ * bawah rata, dan nama PIHAK PERTAMA & PIHAK KEDUA tetap SEJAJAR di baris
+ * tabel yang sama. Output selalu PNG (menjaga transparansi).
+ * GD tak tersedia / gagal -> null (pemanggil memakai gambar asli).
+ */
+function docx_pad_image_top(string $bin, int $padNatural): ?string {
+  if ($padNatural <= 0) return $bin;
+  if (!function_exists('imagecreatefromstring')) return null;
+  $src = @imagecreatefromstring($bin);
+  if (!$src) return null;
+  $w = imagesx($src);
+  $h = imagesy($src);
+  $dst = imagecreatetruecolor($w, $h + $padNatural);
+  imagealphablending($dst, false);
+  imagesavealpha($dst, true);
+  $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+  imagefilledrectangle($dst, 0, 0, $w, $h + $padNatural, $transparent);
+  imagealphablending($dst, true);
+  imagecopy($dst, $src, 0, $padNatural, 0, 0, $w, $h);
+  ob_start();
+  $ok = imagepng($dst, null, 6);
+  $out = ob_get_clean();
+  imagedestroy($src);
+  imagedestroy($dst);
+  return ($ok && $out !== false && $out !== '') ? $out : null;
+}
+
+/**
  * Isi placeholder {{...}} ke dalam file .docx (mempertahankan format asli:
  * tabel, bold, heading, dll.) lalu kembalikan biner .docx hasilnya.
  * Mencakup body + header + footer dokumen. Dapat menyisipkan gambar tanda
@@ -277,7 +307,7 @@ function fill_docx_template(
   // Gambar yang akan disisipkan: placeholder => [binary, lebar px, geser px].
   $imgs = [];
   if ($signaturePng !== null && $signaturePng !== '') {
-    $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 190, 'offx' => 0, 'offy' => 0];
+    $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 150, 'offx' => 0, 'offy' => 0];
   }
   if ($stempelPng !== null && $stempelPng !== '') {
     // Stempel dipasang PERSIS di titik placeholder {{STEMPEL}} (offset 0,0).
@@ -289,6 +319,30 @@ function fill_docx_template(
     // Perkecil stempel besar dulu -> dokumen ringan & preview andal di semua perangkat.
     $stempelPng = docx_downscale_image($stempelPng, 480);
     $imgs['STEMPEL'] = ['bin' => $stempelPng, 'w' => (int) ($ss['width'] ?? 120), 'offx' => 0, 'offy' => 0];
+  }
+
+  // SEJAJARKAN stempel & tanda tangan: samakan TINGGI TAMPIL kedua gambar dengan
+  // bantalan transparan di ATAS gambar yang lebih pendek. Keduanya duduk di sel
+  // kiri/kanan baris tabel yang sama -> tinggi sama = kedua gambar (dan nama di
+  // bawahnya) sejajar rata bawah.
+  if (count($imgs) > 1 && function_exists('getimagesizefromstring')) {
+    $disp = [];
+    foreach ($imgs as $ph => $img) {
+      $ii = @getimagesizefromstring($img['bin']);
+      if (!$ii || $ii[0] <= 0 || $ii[1] <= 0) continue;
+      $h = (int) round(((int) $img['w']) * ($ii[1] / $ii[0]));
+      $disp[$ph] = ['w' => (int) $img['w'], 'h' => max(24, min(260, $h)), 'natw' => (int) $ii[0]];
+    }
+    if (count($disp) > 1) {
+      $targetH = min(260, max(array_column($disp, 'h')));
+      foreach ($disp as $ph => $d) {
+        if ($d['h'] >= $targetH) continue;
+        // Selisih tinggi tampil -> px pada resolusi alami gambar tsb.
+        $padNatural = (int) round(($targetH - $d['h']) * ($d['natw'] / $d['w']));
+        $padded = docx_pad_image_top($imgs[$ph]['bin'], $padNatural);
+        if ($padded !== null) $imgs[$ph]['bin'] = $padded;
+      }
+    }
   }
 
   $drawings = [];  // placeholder => markup

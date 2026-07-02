@@ -127,6 +127,17 @@ try {
     }
   }
 
+  // Detail untuk response: saat TIDAK lulus, kunci jawaban TIDAK ikut dikirim
+  // ke klien (retry harus tetap ujian murni — kunci tak bisa diintip via network).
+  // Snapshot LENGKAP tetap tersimpan di tes_hasil.jawaban_json untuk review admin.
+  $detail_response = $detail;
+  if (!$lulus) {
+    foreach ($detail_response as &$dr) {
+      unset($dr['jawaban_benar']);
+    }
+    unset($dr);
+  }
+
   $percobaan_baru = $percobaan + 1;
   json_success([
     'hasil_id'        => $hasil_id,
@@ -138,7 +149,7 @@ try {
     'maks_poin'       => $maks_poin,
     'passing_grade'   => $passing_grade,
     'sisa_percobaan'  => $max > 0 ? max(0, $max - $percobaan_baru) : null,
-    'detail_jawaban'  => $detail,
+    'detail_jawaban'  => $detail_response,
     'sign_token'      => $sign_token,
     'kontrak_id'      => $kontrak_id,
   ], $lulus ? 'Selamat, kamu LULUS!' : 'Belum lulus, coba lagi ya.');

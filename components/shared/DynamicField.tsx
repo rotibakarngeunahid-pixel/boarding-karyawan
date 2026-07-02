@@ -2,6 +2,7 @@
 
 import { Input, Textarea, Label } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { DatePickerStepwise } from '@/components/shared/DatePickerStepwise';
 import { FileUploadPreview } from '@/components/shared/FileUploadPreview';
 import { PROVINSI_LIST } from '@/lib/utils';
 import type { FormField } from '@/types';
@@ -67,17 +68,17 @@ export function DynamicField({
             </label>
           ))}
         </div>
+      ) : f.tipe === 'date' ? (
+        // Input tanggal bertahap: Tahun → Bulan → Tanggal (output tetap ISO YYYY-MM-DD).
+        <DatePickerStepwise
+          value={value}
+          onChange={onValue}
+          minYear={1950}
+          maxYear={f.field_key === 'tanggal_lahir' ? 2010 : new Date().getFullYear() + 10}
+        />
       ) : (
         <Input
-          type={
-            f.tipe === 'number'
-              ? 'number'
-              : f.tipe === 'tel'
-                ? 'tel'
-                : f.tipe === 'date'
-                  ? 'date'
-                  : 'text'
-          }
+          type={f.tipe === 'number' ? 'number' : f.tipe === 'tel' ? 'tel' : 'text'}
           inputMode={f.tipe === 'tel' ? 'tel' : f.tipe === 'number' ? 'numeric' : undefined}
           value={value}
           onChange={(e) => onValue(e.target.value)}

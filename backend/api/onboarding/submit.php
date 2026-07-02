@@ -40,18 +40,32 @@ try {
   $columns['invitation_id'] = $inv['id'];
   $columns['cabang']        = $inv['cabang'];
   $columns['posisi']        = $inv['posisi'];
+  // Kandidat baru masuk sebagai 'nonaktif' (pending review) — jadi AKTIF saat
+  // di-approve admin. Tetap tampil di list Karyawan (list tidak memfilter status).
+  $columns['status']        = 'nonaktif';
   $columns['data_tambahan'] = $custom ? json_encode(array_values($custom), JSON_UNESCAPED_UNICODE) : null;
 
-  // 5. INSERT dinamis + tandai invitation submitted (transaksi)
-  $cols = array_keys($columns);
-  $placeholders = implode(', ', array_fill(0, count($cols), '?'));
-  $sql = 'INSERT INTO karyawan (' . implode(', ', $cols) . ') VALUES (' . $placeholders . ')';
-
+  // 5. INSERT/UPDATE (transaksi). invitation_id UNIQUE: bila submit sebelumnya
+  //    sempat membuat record (mis. retry setelah koneksi putus), UPDATE record
+  //    itu alih-alih gagal duplicate key — kandidat tidak pernah "hilang".
   $db->beginTransaction();
 
-  $stmt = $db->prepare($sql);
-  $stmt->execute(array_values($columns));
-  $karyawan_id = (int) $db->lastInsertId();
+  $cek = $db->prepare('SELECT id FROM karyawan WHERE invitation_id = ? LIMIT 1');
+  $cek->execute([$inv['id']]);
+  $existing_id = (int) ($cek->fetchColumn() ?: 0);
+
+  if ($existing_id) {
+    $sets = implode(', ', array_map(function ($c) { return $c . ' = ?'; }, array_keys($columns)));
+    $stmt = $db->prepare('UPDATE karyawan SET ' . $sets . ' WHERE id = ?');
+    $stmt->execute(array_merge(array_values($columns), [$existing_id]));
+    $karyawan_id = $existing_id;
+  } else {
+    $cols = array_keys($columns);
+    $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+    $stmt = $db->prepare('INSERT INTO karyawan (' . implode(', ', $cols) . ') VALUES (' . $placeholders . ')');
+    $stmt->execute(array_values($columns));
+    $karyawan_id = (int) $db->lastInsertId();
+  }
 
   $upd = $db->prepare("UPDATE onboarding_invitations SET status = 'submitted' WHERE id = ?");
   $upd->execute([$inv['id']]);
