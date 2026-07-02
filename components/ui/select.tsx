@@ -12,7 +12,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       <select
         ref={ref}
         className={cn(
-          'h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-9 text-sm text-gray-900 focus:border-rbn-primary focus:outline-none focus:ring-1 focus:ring-rbn-primary disabled:bg-gray-100',
+          // Mobile: tinggi 44px & font 16px (target sentuh nyaman, cegah zoom iOS).
+          'h-11 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-9 text-base text-gray-900 focus:border-rbn-primary focus:outline-none focus:ring-1 focus:ring-rbn-primary disabled:bg-gray-100 sm:h-10 sm:text-sm',
           className,
         )}
         {...props}

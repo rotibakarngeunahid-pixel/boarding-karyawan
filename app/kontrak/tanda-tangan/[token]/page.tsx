@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2, FileSignature, FileDown } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileSignature, FileDown, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { LoadingState } from '@/components/ui/spinner';
 import { SignaturePad, type SignaturePadHandle } from '@/components/shared/SignaturePad';
 import { DocxViewer } from '@/components/shared/DocxViewer';
 import { ApiError, getKontrakSignInfo, kontrakSignDocUrl, submitKontrakSign } from '@/lib/api';
+import { downloadDocxAsPdf } from '@/lib/docxToPdf';
 import { formatTanggal, formatTanggalJam } from '@/lib/utils';
 import type { KontrakSignInfo } from '@/types';
 
@@ -25,6 +26,7 @@ export default function TandaTanganKontrakPage() {
   const [setuju, setSetuju] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const padRef = useRef<SignaturePadHandle>(null);
 
   // Nama sudah diisi di formulir onboarding -> pakai otomatis, tidak perlu ketik ulang.
@@ -163,12 +165,31 @@ export default function TandaTanganKontrakPage() {
               )}
 
               <div className="mt-6">
-                <a
-                  href={kontrakSignDocUrl(token, true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-rbn-primary px-5 py-3 text-sm font-semibold text-white hover:bg-rbn-primary-dark"
+                <button
+                  type="button"
+                  disabled={downloading}
+                  onClick={async () => {
+                    setDownloading(true);
+                    try {
+                      const nomor = (info.nomor_kontrak || 'kontrak').replace(/[^A-Za-z0-9]+/g, '_');
+                      await downloadDocxAsPdf(kontrakSignDocUrl(token), `Kontrak_${nomor}.pdf`);
+                    } catch {
+                      // Fallback: bila konversi PDF gagal di perangkat ini, tetap beri dokumennya (Word).
+                      toast.error('Gagal membuat PDF di perangkat ini — mengunduh versi Word.');
+                      window.location.href = kontrakSignDocUrl(token, true);
+                    } finally {
+                      setDownloading(false);
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-rbn-primary px-5 py-3 text-sm font-semibold text-white hover:bg-rbn-primary-dark disabled:opacity-60"
                 >
-                  <FileDown className="h-5 w-5" /> Download Kontrak (Word)
-                </a>
+                  {downloading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <FileDown className="h-5 w-5" />
+                  )}
+                  {downloading ? 'Menyiapkan PDF…' : 'Download Kontrak (PDF)'}
+                </button>
                 <p className="mt-2 text-xs text-gray-400">
                   Tanda tangan Anda sudah menyatu di dalam dokumen kontrak.
                 </p>

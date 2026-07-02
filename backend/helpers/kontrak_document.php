@@ -90,6 +90,7 @@ function kontrak_placeholder_map(array $k): array {
     'TANGGAL_HARI_INI' => kontrak_fmt_tanggal_id(date('Y-m-d')),
     // Placeholder gambar. Default kosong; diisi gambar saat dirender.
     'TANDA_TANGAN'     => '', // tanda tangan karyawan (saat sudah TTD)
+    'TANDATANGAN'      => '', // alias tanpa underscore (dipakai di template)
     'STEMPEL'          => '', // stempel/cap perusahaan (PIHAK PERTAMA)
   ];
 }
@@ -421,9 +422,11 @@ function fill_docx_template(
       // Pecah run agar teks di sekitar placeholder (mis. nama di baris sama) tetap utuh.
       if ($drawings && $name === 'word/document.xml') {
         foreach ($drawings as $ph => $draw) {
+          // Terima juga alias tanpa underscore: {{TANDATANGAN}} == {{TANDA_TANGAN}}.
+          $phPat = ($ph === 'TANDA_TANGAN') ? 'TANDA_?TANGAN' : preg_quote($ph, '#');
           $cnt = 0;
           $xml = preg_replace_callback(
-            '#<w:r\b([^>]*)>(\s*<w:rPr>.*?</w:rPr>)?\s*<w:t([^>]*)>([^<]*)\{\{\s*' . $ph . '\s*\}\}([^<]*)</w:t>\s*</w:r>#us',
+            '#<w:r\b([^>]*)>(\s*<w:rPr>.*?</w:rPr>)?\s*<w:t([^>]*)>([^<]*)\{\{\s*' . $phPat . '\s*\}\}([^<]*)</w:t>\s*</w:r>#us',
             function ($m) use ($draw) {
               $rAttr = $m[1];
               $rPr = $m[2] ?? '';

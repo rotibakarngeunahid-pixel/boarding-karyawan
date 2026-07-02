@@ -56,13 +56,21 @@ export function DynamicField({
       ) : f.tipe === 'radio' ? (
         <div className="space-y-2">
           {f.opsi.map((o) => (
-            <label key={o} className="flex cursor-pointer items-center gap-2 text-sm">
+            // Kartu ber-border selebar layar: target sentuh besar & jelas di HP.
+            <label
+              key={o}
+              className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-base transition-colors sm:text-sm ${
+                value === o
+                  ? 'border-rbn-primary bg-rbn-primary/5'
+                  : 'border-gray-200 hover:bg-gray-50'
+              }`}
+            >
               <input
                 type="radio"
                 name={f.field_key}
                 checked={value === o}
                 onChange={() => onValue(o)}
-                className="h-4 w-4 accent-rbn-primary"
+                className="h-4 w-4 shrink-0 accent-rbn-primary"
               />
               {o}
             </label>

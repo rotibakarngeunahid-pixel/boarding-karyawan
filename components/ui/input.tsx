@@ -10,7 +10,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     <input
       ref={ref}
       className={cn(
-        'h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-rbn-primary focus:outline-none focus:ring-1 focus:ring-rbn-primary disabled:bg-gray-100',
+        // Mobile: tinggi 44px (nyaman disentuh) & font 16px (cegah auto-zoom iOS).
+        'h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-base text-gray-900 placeholder:text-gray-400 focus:border-rbn-primary focus:outline-none focus:ring-1 focus:ring-rbn-primary disabled:bg-gray-100 sm:h-10 sm:text-sm',
         className,
       )}
       {...props}
@@ -26,7 +27,8 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-rbn-primary focus:outline-none focus:ring-1 focus:ring-rbn-primary disabled:bg-gray-100',
+      // Mobile: font 16px agar iOS tidak auto-zoom saat fokus.
+      'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-base text-gray-900 placeholder:text-gray-400 focus:border-rbn-primary focus:outline-none focus:ring-1 focus:ring-rbn-primary disabled:bg-gray-100 sm:py-2 sm:text-sm',
       className,
     )}
     {...props}

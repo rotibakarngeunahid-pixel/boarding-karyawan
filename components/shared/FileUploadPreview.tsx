@@ -69,13 +69,14 @@ export function FileUploadPreview({
           </button>
         </div>
       ) : (
+        // Mobile: area sentuh selebar kartu; desktop dibatasi agar tetap rapi.
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex h-32 w-full max-w-[12rem] flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-rbn-primary hover:text-rbn-primary"
+          className="flex h-32 w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-rbn-primary hover:text-rbn-primary sm:max-w-[12rem]"
         >
           <Upload className="h-6 w-6" />
-          <span className="text-xs">Pilih gambar</span>
+          <span className="text-sm sm:text-xs">Pilih gambar / foto</span>
         </button>
       )}
 

@@ -127,10 +127,10 @@ export default function OnboardingFormPage() {
   const visibleFields = fields.filter((f) => isVisible(f, values));
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="mx-auto max-w-2xl px-4">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="mx-auto max-w-2xl px-3 sm:px-4">
         {/* Header */}
-        <div className="mb-6 rounded-2xl bg-rbn-primary p-6 text-white">
+        <div className="mb-4 rounded-xl bg-rbn-primary p-4 text-white sm:mb-6 sm:rounded-2xl sm:p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
               <Logo className="h-10 w-10" />
@@ -150,7 +150,10 @@ export default function OnboardingFormPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl bg-white p-6 shadow-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5 rounded-xl bg-white p-4 shadow-sm sm:rounded-2xl sm:p-6"
+        >
           {visibleFields.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">Belum ada pertanyaan pada formulir.</p>
           ) : (
