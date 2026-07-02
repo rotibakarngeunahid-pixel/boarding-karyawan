@@ -53,7 +53,20 @@ try {
 
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
-    json_success($stmt->fetchAll());
+    $rows = $stmt->fetchAll();
+
+    // Driver PDO sebagian hosting (libmysqlclient) mengembalikan SEMUA angka
+    // sebagai string ("0") -> badge status tes di frontend salah baca
+    // (perbandingan ketat === 0 gagal, string "0" truthy). Cast eksplisit.
+    foreach ($rows as &$r) {
+      $r['id']                  = (int) $r['id'];
+      $r['invitation_id']       = $r['invitation_id'] !== null ? (int) $r['invitation_id'] : null;
+      $r['skor_tes']            = (float) $r['skor_tes'];
+      $r['lulus_tes']           = (int) $r['lulus_tes'];
+      $r['total_percobaan_tes'] = (int) $r['total_percobaan_tes'];
+    }
+    unset($r);
+    json_success($rows);
   }
 
   if ($method === 'POST') {

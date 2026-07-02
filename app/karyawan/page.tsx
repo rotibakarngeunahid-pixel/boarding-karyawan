@@ -19,8 +19,9 @@ import { useCabangOptions } from '@/lib/useCabang';
 import { exportToCSV, formatTanggal } from '@/lib/utils';
 
 function StatusTesBadge({ k }: { k: Karyawan }) {
-  if (k.total_percobaan_tes === 0) return <Badge>Belum Tes</Badge>;
-  return k.lulus_tes ? (
+  // Number(): sebagian hosting mengirim angka sebagai string ("0" itu truthy).
+  if (Number(k.total_percobaan_tes) === 0) return <Badge>Belum Tes</Badge>;
+  return Number(k.lulus_tes) ? (
     <Badge status="approved">Lulus</Badge>
   ) : (
     <Badge status="rejected">Tidak Lulus</Badge>
@@ -68,7 +69,8 @@ export default function KaryawanPage() {
         Posisi: k.posisi ?? '',
         WhatsApp: k.no_whatsapp,
         TanggalBergabung: k.tanggal_bergabung ?? '',
-        StatusTes: k.total_percobaan_tes === 0 ? 'Belum' : k.lulus_tes ? 'Lulus' : 'Tidak Lulus',
+        StatusTes:
+          Number(k.total_percobaan_tes) === 0 ? 'Belum' : Number(k.lulus_tes) ? 'Lulus' : 'Tidak Lulus',
         SkorTes: k.skor_tes,
         Status: k.status,
       })),
