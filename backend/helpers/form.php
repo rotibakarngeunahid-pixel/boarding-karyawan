@@ -154,6 +154,12 @@ function collect_karyawan_columns(PDO $db, array $post, array $files, bool $file
       }
     }
 
+    // Field angka wajib digit murni (0-9) — cadangan bila filter frontend
+    // dilewati (mis. panggilan API langsung).
+    if ($val !== '' && $f['tipe'] === 'number' && !preg_match('/^[0-9]+$/', $val)) {
+      json_error('Isian harus berupa angka untuk: ' . $f['label'], 422);
+    }
+
     if ($f['is_builtin'] && $f['kolom_db']) {
       $columns[$f['kolom_db']] = ($val !== '') ? $val : null;
     } elseif (!$f['is_builtin']) {

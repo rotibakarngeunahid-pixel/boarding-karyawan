@@ -27,6 +27,23 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { className?: string 
     const drawing = useRef(false);
     const last = useRef<{ x: number; y: number } | null>(null);
     const [empty, setEmpty] = useState(true);
+    // Bounding box tinta (CSS px, sistem koordinat sama dgn ctx krn ctx.scale(ratio)).
+    // Dipakai memotong hasil ke area coretan saja — tanpa ini, seluruh kanvas putih
+    // kosong ikut terekam & tanda tangan jadi tampak SANGAT KECIL saat diskalakan
+    // ke lebar tetap di dokumen kontrak (coretan cuma sebagian kecil dari kanvas).
+    const bbox = useRef<{ minX: number; minY: number; maxX: number; maxY: number } | null>(null);
+
+    function growBbox(p: { x: number; y: number }) {
+      const b = bbox.current;
+      if (!b) {
+        bbox.current = { minX: p.x, minY: p.y, maxX: p.x, maxY: p.y };
+        return;
+      }
+      b.minX = Math.min(b.minX, p.x);
+      b.minY = Math.min(b.minY, p.y);
+      b.maxX = Math.max(b.maxX, p.x);
+      b.maxY = Math.max(b.maxY, p.y);
+    }
 
     const getCtx = useCallback(() => {
       const canvas = canvasRef.current;
@@ -55,6 +72,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { className?: string 
       const onResize = () => {
         // Resize mengosongkan kanvas; reset state agar konsisten.
         setup();
+        bbox.current = null;
         setEmpty(true);
       };
       window.addEventListener('resize', onResize);
@@ -70,7 +88,9 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { className?: string 
       e.preventDefault();
       e.currentTarget.setPointerCapture(e.pointerId);
       drawing.current = true;
-      last.current = pos(e);
+      const p = pos(e);
+      last.current = p;
+      growBbox(p); // titik tunggal (tap) tetap harus masuk bbox
     }
 
     function move(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -84,6 +104,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { className?: string 
       ctx.lineTo(p.x, p.y);
       ctx.stroke();
       last.current = p;
+      growBbox(p);
       if (empty) setEmpty(false);
     }
 
@@ -102,17 +123,45 @@ export const SignaturePad = forwardRef<SignaturePadHandle, { className?: string 
       const ctx = getCtx();
       if (!canvas || !ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      bbox.current = null;
       setEmpty(true);
     }, [getCtx]);
+
+    // Potong hasil ke bounding box tinta (+ padding) alih-alih seluruh kanvas
+    // kosong -> tanda tangan tampil BESAR & jelas saat ditanam di dokumen.
+    const cropToInk = useCallback((): string | null => {
+      const canvas = canvasRef.current;
+      const b = bbox.current;
+      if (!canvas || !b) return null;
+
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const cssW = canvas.width / ratio;
+      const cssH = canvas.height / ratio;
+      const pad = 14;
+      const x0 = Math.max(0, b.minX - pad);
+      const y0 = Math.max(0, b.minY - pad);
+      const x1 = Math.min(cssW, b.maxX + pad);
+      const y1 = Math.min(cssH, b.maxY + pad);
+      const sw = Math.max(1, (x1 - x0) * ratio);
+      const sh = Math.max(1, (y1 - y0) * ratio);
+
+      const out = document.createElement('canvas');
+      out.width = sw;
+      out.height = sh;
+      const octx = out.getContext('2d');
+      if (!octx) return canvas.toDataURL('image/png');
+      octx.drawImage(canvas, x0 * ratio, y0 * ratio, sw, sh, 0, 0, sw, sh);
+      return out.toDataURL('image/png');
+    }, []);
 
     useImperativeHandle(
       ref,
       () => ({
-        toDataURL: () => (empty ? null : canvasRef.current?.toDataURL('image/png') ?? null),
+        toDataURL: () => (empty ? null : cropToInk() ?? canvasRef.current?.toDataURL('image/png') ?? null),
         clear,
         isEmpty: () => empty,
       }),
-      [empty, clear],
+      [empty, clear, cropToInk],
     );
 
     return (

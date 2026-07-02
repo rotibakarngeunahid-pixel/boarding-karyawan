@@ -277,6 +277,21 @@ function docx_pad_image_top(string $bin, int $padNatural): ?string {
 }
 
 /**
+ * Longgarkan baris tabel dengan tinggi "exact" (w:hRule="exact") jadi "atLeast".
+ * Word menyimpan tinggi baris HASIL DRAG MANUAL sebagai "exact" (kaku, tidak
+ * boleh tumbuh) — saat dirender di docx-preview (browser/PDF), jika teks/
+ * gambar dalam sel butuh ruang lebih tinggi dari nilai itu, kontennya TUMPANG
+ * TINDIH dengan garis border baris berikutnya (garis "menembus" tulisan).
+ * "atLeast" menjaga tinggi MINIMAL yang sama tapi mengizinkan baris tumbuh
+ * mengikuti isi — hasil visual di Word tidak berubah, hanya jadi lebih toleran.
+ */
+function docx_relax_exact_row_heights(string $xml): string {
+  return preg_replace_callback('/<w:trHeight\b[^>]*\/>/', function ($m) {
+    return str_replace('w:hRule="exact"', 'w:hRule="atLeast"', $m[0]);
+  }, $xml);
+}
+
+/**
  * Isi placeholder {{...}} ke dalam file .docx (mempertahankan format asli:
  * tabel, bold, heading, dll.) lalu kembalikan biner .docx hasilnya.
  * Mencakup body + header + footer dokumen. Dapat menyisipkan gambar tanda
@@ -308,7 +323,10 @@ function fill_docx_template(
   // Gambar yang akan disisipkan: placeholder => [binary, lebar px, geser px].
   $imgs = [];
   if ($signaturePng !== null && $signaturePng !== '') {
-    $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 150, 'offx' => 0, 'offy' => 0];
+    // Lebar 190px (naik dari 150) — dipotong ke bounding box tinta di klien
+    // (SignaturePad) jadi gambar ini SUDAH rapat ke coretan, bukan kanvas
+    // kosong; lebar lebih besar membuat tanda tangan tampil jelas & tidak mungil.
+    $imgs['TANDA_TANGAN'] = ['bin' => $signaturePng, 'w' => 190, 'offx' => 0, 'offy' => 0];
   }
   if ($stempelPng !== null && $stempelPng !== '') {
     // Stempel dipasang PERSIS di titik placeholder {{STEMPEL}} (offset 0,0).
@@ -411,6 +429,10 @@ function fill_docx_template(
     if ($name && preg_match('#^word/(document|header\d*|footer\d*)\.xml$#', $name)) {
       $xml = $zip->getFromName($name);
       if ($xml === false || $xml === '') continue;
+
+      // Baris tabel "exact" -> "atLeast" (lihat docblock fungsi) agar garis
+      // tabel tidak menembus tulisan saat dirender di browser/PDF.
+      $xml = docx_relax_exact_row_heights($xml);
 
       // Normalisasi: satukan placeholder yang terpecah antar-run (Word sering
       // memecah {{...}} ke beberapa bagian) agar mudah dicocokkan.

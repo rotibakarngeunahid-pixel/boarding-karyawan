@@ -84,10 +84,22 @@ export function DynamicField({
           minYear={1950}
           maxYear={f.field_key === 'tanggal_lahir' ? 2010 : new Date().getFullYear() + 10}
         />
+      ) : f.tipe === 'number' ? (
+        // type="text"+inputMode="numeric": type="number" native TIDAK benar2
+        // memblokir huruf di semua browser/HP (mis. "e", "-", tempel teks).
+        // Filter aktif di onChange -> hanya digit 0-9 yang bisa masuk.
+        <Input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={value}
+          onChange={(e) => onValue(e.target.value.replace(/[^0-9]/g, ''))}
+          placeholder={f.placeholder ?? ''}
+        />
       ) : (
         <Input
-          type={f.tipe === 'number' ? 'number' : f.tipe === 'tel' ? 'tel' : 'text'}
-          inputMode={f.tipe === 'tel' ? 'tel' : f.tipe === 'number' ? 'numeric' : undefined}
+          type={f.tipe === 'tel' ? 'tel' : 'text'}
+          inputMode={f.tipe === 'tel' ? 'tel' : undefined}
           value={value}
           onChange={(e) => onValue(e.target.value)}
           placeholder={f.placeholder ?? ''}
