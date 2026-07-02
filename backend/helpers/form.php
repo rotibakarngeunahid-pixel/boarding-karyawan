@@ -160,6 +160,12 @@ function collect_karyawan_columns(PDO $db, array $post, array $files, bool $file
       json_error('Isian harus berupa angka untuk: ' . $f['label'], 422);
     }
 
+    // Field telepon: digit saja, boleh "+" di depan (kode negara) — cadangan
+    // bila filter frontend dilewati.
+    if ($val !== '' && $f['tipe'] === 'tel' && !preg_match('/^\+?[0-9]+$/', $val)) {
+      json_error('Isian harus berupa nomor telepon (angka) untuk: ' . $f['label'], 422);
+    }
+
     if ($f['is_builtin'] && $f['kolom_db']) {
       $columns[$f['kolom_db']] = ($val !== '') ? $val : null;
     } elseif (!$f['is_builtin']) {

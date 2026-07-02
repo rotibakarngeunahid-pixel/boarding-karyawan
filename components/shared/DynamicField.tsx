@@ -96,10 +96,23 @@ export function DynamicField({
           onChange={(e) => onValue(e.target.value.replace(/[^0-9]/g, ''))}
           placeholder={f.placeholder ?? ''}
         />
+      ) : f.tipe === 'tel' ? (
+        // Sama seperti 'number': type="tel" native TIDAK memblokir huruf di
+        // semua HP/browser. Filter ke digit + boleh "+" di depan (kode negara).
+        <Input
+          type="text"
+          inputMode="tel"
+          value={value}
+          onChange={(e) => {
+            let v = e.target.value.replace(/[^0-9+]/g, '');
+            v = v[0] === '+' ? '+' + v.slice(1).replace(/\+/g, '') : v.replace(/\+/g, '');
+            onValue(v);
+          }}
+          placeholder={f.placeholder ?? ''}
+        />
       ) : (
         <Input
-          type={f.tipe === 'tel' ? 'tel' : 'text'}
-          inputMode={f.tipe === 'tel' ? 'tel' : undefined}
+          type="text"
           value={value}
           onChange={(e) => onValue(e.target.value)}
           placeholder={f.placeholder ?? ''}
